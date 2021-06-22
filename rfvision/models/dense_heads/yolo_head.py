@@ -302,22 +302,10 @@ class YOLOV3Head(BaseDenseHead, BBoxTestMixin):
                 _, topk_inds = conf_pred.topk(nms_pre)
                 batch_inds = torch.arange(batch_size).view(
                     -1, 1).expand_as(topk_inds).long()
-                # Avoid onnx2tensorrt issue in https://github.com/NVIDIA/TensorRT/issues/1134 # noqa: E501
-                if torch.onnx.is_in_onnx_export():
-                    transformed_inds = (
-                        bbox_pred.shape[1] * batch_inds + topk_inds)
-                    bbox_pred = bbox_pred.reshape(
-                        -1, 4)[transformed_inds, :].reshape(batch_size, -1, 4)
-                    cls_pred = cls_pred.reshape(
-                        -1, self.num_classes)[transformed_inds, :].reshape(
-                            batch_size, -1, self.num_classes)
-                    conf_pred = conf_pred.reshape(-1,
-                                                  1)[transformed_inds].reshape(
-                                                      batch_size, -1)
-                else:
-                    bbox_pred = bbox_pred[batch_inds, topk_inds, :]
-                    cls_pred = cls_pred[batch_inds, topk_inds, :]
-                    conf_pred = conf_pred[batch_inds, topk_inds]
+                
+                bbox_pred = bbox_pred[batch_inds, topk_inds, :]
+                cls_pred = cls_pred[batch_inds, topk_inds, :]
+                conf_pred = conf_pred[batch_inds, topk_inds]
             # Save the result of current scale
             multi_lvl_bboxes.append(bbox_pred)
             multi_lvl_cls_scores.append(cls_pred)
@@ -349,7 +337,7 @@ class YOLOV3Head(BaseDenseHead, BBoxTestMixin):
                                           batch_mlvl_conf_scores):
                 # Filtering out all predictions with conf < conf_thr
                 conf_thr = cfg.get('conf_thr', -1)
-                if conf_thr > 0 and (not torch.onnx.is_in_onnx_export()):
+                if conf_thr > 0:
                     # TensorRT not support NonZero
                     # add as_tuple=False for compatibility in Pytorch 1.6
                     # flatten would create a Reshape op with constant values,

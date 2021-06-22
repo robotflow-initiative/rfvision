@@ -305,36 +305,6 @@ class FCNMaskHead(BaseModule):
             cls_segms[labels[i]].append(im_mask[i].detach().cpu().numpy())
         return cls_segms
 
-    def onnx_export(self, mask_pred, det_bboxes, det_labels, rcnn_test_cfg,
-                    ori_shape, **kwargs):
-        """Get segmentation masks from mask_pred and bboxes.
-
-        Args:
-            mask_pred (Tensor): shape (n, #class, h, w).
-            det_bboxes (Tensor): shape (n, 4/5)
-            det_labels (Tensor): shape (n, )
-            rcnn_test_cfg (dict): rcnn testing config
-            ori_shape (Tuple): original image height and width, shape (2,)
-
-        Returns:
-            Tensor: a mask of shape (N, img_h, img_w).
-        """
-
-        mask_pred = mask_pred.sigmoid()
-        bboxes = det_bboxes[:, :4]
-        labels = det_labels
-        # No need to consider rescale and scale_factor while exporting to ONNX
-        img_h, img_w = ori_shape[:2]
-        threshold = rcnn_test_cfg.mask_thr_binary
-        if not self.class_agnostic:
-            box_inds = torch.arange(mask_pred.shape[0])
-            mask_pred = mask_pred[box_inds, labels][:, None]
-        masks, _ = _do_paste_mask(
-            mask_pred, bboxes, img_h, img_w, skip_empty=False)
-        if threshold >= 0:
-            masks = (masks >= threshold).to(dtype=torch.bool)
-        return masks
-
 
 def _do_paste_mask(masks, boxes, img_h, img_w, skip_empty=True):
     """Paste instance masks according to boxes.
@@ -385,14 +355,12 @@ def _do_paste_mask(masks, boxes, img_h, img_w, skip_empty=True):
     img_y = (img_y - y0) / (y1 - y0) * 2 - 1
     img_x = (img_x - x0) / (x1 - x0) * 2 - 1
     # img_x, img_y have shapes (N, w), (N, h)
-    # IsInf op is not supported with ONNX<=1.7.0
-    if not torch.onnx.is_in_onnx_export():
-        if torch.isinf(img_x).any():
-            inds = torch.where(torch.isinf(img_x))
-            img_x[inds] = 0
-        if torch.isinf(img_y).any():
-            inds = torch.where(torch.isinf(img_y))
-            img_y[inds] = 0
+    if torch.isinf(img_x).any():
+        inds = torch.where(torch.isinf(img_x))
+        img_x[inds] = 0
+    if torch.isinf(img_y).any():
+        inds = torch.where(torch.isinf(img_y))
+        img_y[inds] = 0
 
     gx = img_x[:, None, :].expand(N, img_y.size(1), img_x.size(1))
     gy = img_y[:, :, None].expand(N, img_y.size(1), img_x.size(1))

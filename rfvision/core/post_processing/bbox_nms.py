@@ -45,10 +45,9 @@ def multiclass_nms(multi_bboxes,
     scores = scores.reshape(-1)
     labels = labels.reshape(-1)
 
-    if not torch.onnx.is_in_onnx_export():
-        # NonZero not supported  in TensorRT
-        # remove low scoring boxes
-        valid_mask = scores > score_thr
+    # NonZero not supported  in TensorRT
+    # remove low scoring boxes
+    valid_mask = scores > score_thr
     # multiply score_factor after threshold to preserve more bboxes, improve
     # mAP by 1% for YOLOv3
     if score_factors is not None:
@@ -58,21 +57,12 @@ def multiclass_nms(multi_bboxes,
         score_factors = score_factors.reshape(-1)
         scores = scores * score_factors
 
-    if not torch.onnx.is_in_onnx_export():
-        # NonZero not supported  in TensorRT
-        inds = valid_mask.nonzero(as_tuple=False).squeeze(1)
-        bboxes, scores, labels = bboxes[inds], scores[inds], labels[inds]
-    else:
-        # TensorRT NMS plugin has invalid output filled with -1
-        # add dummy data to make detection output correct.
-        bboxes = torch.cat([bboxes, bboxes.new_zeros(1, 4)], dim=0)
-        scores = torch.cat([scores, scores.new_zeros(1)], dim=0)
-        labels = torch.cat([labels, labels.new_zeros(1)], dim=0)
+    # NonZero not supported  in TensorRT
+    inds = valid_mask.nonzero(as_tuple=False).squeeze(1)
+    bboxes, scores, labels = bboxes[inds], scores[inds], labels[inds]
+
 
     if bboxes.numel() == 0:
-        if torch.onnx.is_in_onnx_export():
-            raise RuntimeError('[ONNX Error] Can not record NMS '
-                               'as it has not been executed this time')
         dets = torch.cat([bboxes, scores[:, None]], -1)
         if return_inds:
             return dets, labels, inds

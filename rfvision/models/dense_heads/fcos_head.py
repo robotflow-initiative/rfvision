@@ -306,16 +306,11 @@ class FCOSHead(AnchorFreeHead):
         centerness_pred_list = [
             centernesses[i].detach() for i in range(num_levels)
         ]
-        if torch.onnx.is_in_onnx_export():
-            assert len(
-                img_metas
-            ) == 1, 'Only support one input image while in exporting to ONNX'
-            img_shapes = img_metas[0]['img_shape_for_onnx']
-        else:
-            img_shapes = [
-                img_metas[i]['img_shape']
-                for i in range(cls_scores[0].shape[0])
-            ]
+        
+        img_shapes = [
+            img_metas[i]['img_shape']
+            for i in range(cls_scores[0].shape[0])
+        ]
         scale_factors = [
             img_metas[i]['scale_factor'] for i in range(cls_scores[0].shape[0])
         ]
@@ -396,25 +391,11 @@ class FCOSHead(AnchorFreeHead):
                 _, topk_inds = max_scores.topk(nms_pre)
                 batch_inds = torch.arange(batch_size).view(
                     -1, 1).expand_as(topk_inds).long()
-                # Avoid onnx2tensorrt issue in https://github.com/NVIDIA/TensorRT/issues/1134 # noqa: E501
-                if torch.onnx.is_in_onnx_export():
-                    transformed_inds = bbox_pred.shape[
-                        1] * batch_inds + topk_inds
-                    points = points.reshape(-1,
-                                            2)[transformed_inds, :].reshape(
-                                                batch_size, -1, 2)
-                    bbox_pred = bbox_pred.reshape(
-                        -1, 4)[transformed_inds, :].reshape(batch_size, -1, 4)
-                    scores = scores.reshape(
-                        -1, self.num_classes)[transformed_inds, :].reshape(
-                            batch_size, -1, self.num_classes)
-                    centerness = centerness.reshape(
-                        -1, 1)[transformed_inds].reshape(batch_size, -1)
-                else:
-                    points = points[batch_inds, topk_inds, :]
-                    bbox_pred = bbox_pred[batch_inds, topk_inds, :]
-                    scores = scores[batch_inds, topk_inds, :]
-                    centerness = centerness[batch_inds, topk_inds]
+                
+                points = points[batch_inds, topk_inds, :]
+                bbox_pred = bbox_pred[batch_inds, topk_inds, :]
+                scores = scores[batch_inds, topk_inds, :]
+                centerness = centerness[batch_inds, topk_inds]
 
             bboxes = distance2bbox(points, bbox_pred, max_shape=img_shapes)
             mlvl_bboxes.append(bboxes)
