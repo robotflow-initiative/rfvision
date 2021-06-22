@@ -1,0 +1,4 @@
+open3d
+trimesh
+h5py
+numba
