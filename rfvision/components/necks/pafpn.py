@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from rflib.cnn import ConvModule
 from rflib.runner import auto_fp16
 
-from ..builder import NECKS
+from rfvision.models.builder import NECKS
 from .fpn import FPN
 
 

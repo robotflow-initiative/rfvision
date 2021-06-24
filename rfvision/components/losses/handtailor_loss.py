@@ -1,5 +1,5 @@
 import torch.nn.functional as F
-from robotflow.rflearner.builder import LOSSES
+from rfvision.models.builder import LOSSES
 import torch
 
 @LOSSES.register_module()

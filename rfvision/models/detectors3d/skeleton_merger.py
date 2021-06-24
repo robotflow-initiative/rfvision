@@ -1,6 +1,6 @@
-from robotflow.rflearner.builder import DETECTORS, build_backbone, build_head
-from robotflow.rflearner.models import BaseDetector
-from robotflow.rflib.runner import load_checkpoint
+from rfvision.models.builder import DETECTORS, build_backbone, build_head
+from rfvision.models import BaseDetector
+from rflib.runner import load_checkpoint
 import torch
 import open3d as o3d
 import numpy as np
@@ -80,7 +80,7 @@ class SkeletonMerger(BaseDetector):
 
     def init_weights(self, pretrained=None):
         if isinstance(pretrained, str):
-            from robotflow.rflearner.utils import get_root_logger
+            from rfvision.utils import get_root_logger
             logger = get_root_logger()
             load_checkpoint(self, pretrained, strict=False, logger=logger)
 

@@ -1,6 +1,6 @@
-from robotflow.rflearner.bricks.backbones.resnet import Bottleneck
-from robotflow.rflib.cnn import ConvModule
-from robotflow.rflearner.builder import BACKBONES
+from .resnet import Bottleneck
+from rflib.cnn import ConvModule
+from rfvision.models.builder import BACKBONES
 import torch.nn as nn
 import torch
 import torch.nn.functional as F

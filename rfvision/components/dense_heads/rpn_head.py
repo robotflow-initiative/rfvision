@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from rflib.ops import batched_nms
 from rflib.runner import force_fp32
 
-from ..builder import HEADS
+from rfvision.models.builder import HEADS
 from .anchor_head import AnchorHead
 
 

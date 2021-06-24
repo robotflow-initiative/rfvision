@@ -6,7 +6,7 @@ from rflib.cnn import ConvModule
 from rflib.runner import force_fp32
 
 from rfvision.core import multi_apply
-from ..builder import HEADS, build_loss
+from rfvision.models.builder import HEADS, build_loss
 from .base_dense_head import BaseDenseHead
 from .dense_test_mixins import BBoxTestMixin
 

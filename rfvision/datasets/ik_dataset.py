@@ -1,9 +1,10 @@
 import os
 import numpy as np
 import torch
-import robotflow.rflib
-from robotflow.rflearner.datasets import DATASETS, Custom3DDataset
-from robotflow.rflearner.bricks import IKNetBackbone
+import rflib
+from . import DATASETS
+from .custom3d import Custom3DDataset
+from rfvision.components import IKNetBackbone
 
 SNAP_PARENT = [
     0, # 0's parent
@@ -44,14 +45,14 @@ class INVKDataset(Custom3DDataset):
         quats_all = ()
         if 'freihand_gt' in data_source:
             freihand_gt_path = os.path.join(data_root, 'freihand_j_s_q.pkl')
-            data = robotflow.rflib.load(freihand_gt_path)
+            data = rflib.load(freihand_gt_path)
             joints_xyz_all += np.array(data['joints']),
             quats_all += np.array(data['quat']),
         if 'GenData' in data_source:
             gen_data_root = os.path.join(data_root, 'GenData')
             for i in os.listdir(gen_data_root):
                 if i.endswith('.pkl'):
-                    data = robotflow.rflib.load(os.path.join(gen_data_root,i))
+                    data = rflib.load(os.path.join(gen_data_root,i))
                     joints_xyz_all += data['joint_'],
                     quats_all += data['quat'],
         joints_xyz_all = np.concatenate(joints_xyz_all, axis=0)

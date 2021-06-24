@@ -5,10 +5,10 @@ import warnings
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from robotflow.rflib.cnn import ConvModule, xavier_init, normal_init
-from robotflow.rflib.runner import force_fp32
-from robotflow.rflearner.core import multiclass_nms_with_coef, distance2bbox, multi_apply
-from robotflow.rflearner.builder import HEADS, build_loss
+from rflib.cnn import ConvModule, xavier_init, normal_init
+from rflib.runner import force_fp32
+from rfvision.core import multiclass_nms_with_coef, distance2bbox, multi_apply
+from rfvision.models.builder import HEADS, build_loss
 from .base_dense_head import BaseDenseHead
 from .fcos_head import FCOSHead, INF
 

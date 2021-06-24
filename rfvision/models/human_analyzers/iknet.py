@@ -1,5 +1,5 @@
-from robotflow.rflearner.builder import DETECTORS, build_backbone, build_head, build_loss, build_detector
-from robotflow.rflearner.models import BaseDetector
+from rfvision.models.builder import DETECTORS, build_backbone, build_head, build_loss, build_detector
+from rfvision.models import BaseDetector
 
 
 @DETECTORS.register_module()

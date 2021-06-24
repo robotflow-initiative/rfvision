@@ -1,4 +1,4 @@
-from ..builder import HEADS
+from rfvision.models.builder import HEADS
 from .standard_roi_head import StandardRoIHead
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from robotflow.rflib.utils import print_log
+from rflib.utils import print_log
 from terminaltables import AsciiTable
 
 

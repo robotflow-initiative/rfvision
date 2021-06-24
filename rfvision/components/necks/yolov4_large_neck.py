@@ -1,6 +1,6 @@
-from robotflow.rflib.cnn import ConvModule, kaiming_init, constant_init
-from robotflow.rflearner.bricks.utils.yolo_large_utils import SPPCSP, CSPBlock2, make_divisible, make_round
-from robotflow.rflearner.builder import NECKS
+from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rfvision.components.utils.yolo_large_utils import SPPCSP, CSPBlock2, make_divisible, make_round
+from rfvision.models.builder import NECKS
 
 from torch.nn.modules.batchnorm import _BatchNorm
 import torch.nn as nn

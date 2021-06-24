@@ -1,8 +1,8 @@
 import torch
 
-from robotflow.rflearner.core.bbox import bbox_overlaps
-from robotflow.rflearner.core.bbox.iou_calculators.builder import IOU_CALCULATORS
-from robotflow.rflearner.core.bbox3d import get_box_type
+from rfvision.core.bbox import bbox_overlaps
+from rfvision.core.bbox.iou_calculators.builder import IOU_CALCULATORS
+from rfvision.core.bbox3d import get_box_type
 
 
 @IOU_CALCULATORS.register_module()

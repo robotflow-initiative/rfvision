@@ -7,9 +7,9 @@ import torch.nn as nn
 import torch
 import logging
 from torch.nn.modules.batchnorm import _BatchNorm
-from robotflow.rflearner.builder import BACKBONES
-from robotflow.rflib.cnn import ConvModule, kaiming_init, constant_init
-from robotflow.rflib.runner import load_checkpoint
+from rfvision.models.builder import BACKBONES
+from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rflib.runner import load_checkpoint
 
 
 class ResConv2dBatchLeaky(nn.Module):

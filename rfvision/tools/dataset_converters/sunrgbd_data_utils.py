@@ -1,4 +1,4 @@
-import robotflow.rflib as rflib
+import rflib
 import numpy as np
 from concurrent import futures as futures
 from os import path as osp

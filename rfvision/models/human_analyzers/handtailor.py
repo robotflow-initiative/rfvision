@@ -1,8 +1,8 @@
-from robotflow.rflearner.builder import DETECTORS, build_backbone, build_head, build_loss, build_detector
-from robotflow.rflearner.models import BaseDetector
-from robotflow.rflearner.bricks.utils.handtailor_utils import hm_to_uvd
-from robotflow.rflib.cnn import kaiming_init, constant_init
-from robotflow.rflib.runner import load_checkpoint
+from rfvision.models.builder import DETECTORS, build_backbone, build_head, build_loss, build_detector
+from rfvision.models import BaseDetector
+from rfvision.components.utils.handtailor_utils import hm_to_uvd
+from rflib.cnn import kaiming_init, constant_init
+from rflib.runner import load_checkpoint
 import logging
 import torch
 

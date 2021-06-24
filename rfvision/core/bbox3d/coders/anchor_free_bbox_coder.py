@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from robotflow.rflearner.core.bbox.builder import BBOX_CODERS
+from rfvision.core.bbox.builder import BBOX_CODERS
 from .partial_bin_based_bbox_coder import PartialBinBasedBBoxCoder
 
 

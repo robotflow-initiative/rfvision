@@ -4,8 +4,8 @@ Created on Tue Mar 16 15:24:54 2021
 
 @author: tycoer
 """
-from robotflow.rflib.cnn import ConvModule
-from robotflow.rflib.cnn.bricks import Mish 
+from rflib.cnn import ConvModule
+from rflib.cnn.bricks import Mish 
 import torch.nn as nn
 import torch
 import math

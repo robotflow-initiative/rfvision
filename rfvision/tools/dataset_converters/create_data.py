@@ -1,5 +1,5 @@
 import argparse
-from tools.data_converter import indoor_converter as indoor
+from . import indoor_converter as indoor
 
 
 def scannet_data_prep(root_path, info_prefix, out_dir, workers):

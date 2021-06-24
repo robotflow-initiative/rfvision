@@ -7,9 +7,9 @@ from collections import OrderedDict
 import torch.nn as nn
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from robotflow.rflib.runner import load_checkpoint
-from robotflow.rflib.cnn import ConvModule, kaiming_init, constant_init
-from robotflow.rflearner.builder import BACKBONES
+from rflib.runner import load_checkpoint
+from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rfvision.models.builder import BACKBONES
 import logging
 
 

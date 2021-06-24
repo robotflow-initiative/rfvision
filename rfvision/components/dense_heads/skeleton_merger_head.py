@@ -1,7 +1,7 @@
 import torch.nn as nn 
 import torch.nn.functional as F
 import torch 
-from robotflow.rflearner.builder import HEADS
+from rfvision.models.builder import HEADS
 
 
 def minimum(x, y):

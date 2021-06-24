@@ -2,7 +2,7 @@ import numba
 import numpy as np
 import torch
 
-from robotflow.rflib.ops import nms_gpu, nms_normal_gpu
+from rflib.ops import nms_gpu, nms_normal_gpu
 
 
 def box3d_multiclass_nms(mlvl_bboxes,

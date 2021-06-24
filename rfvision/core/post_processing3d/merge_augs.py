@@ -1,7 +1,7 @@
 import torch
 
-from robotflow.rflib.ops import nms_gpu, nms_normal_gpu
-from robotflow.rflearner.core.bbox3d import bbox3d2result, bbox3d_mapping_back, xywhr2xyxyr
+from rflib.ops import nms_gpu, nms_normal_gpu
+from rfvision.core.bbox3d import bbox3d2result, bbox3d_mapping_back, xywhr2xyxyr
 
 
 def merge_aug_bboxes_3d(aug_results, img_metas, test_cfg):

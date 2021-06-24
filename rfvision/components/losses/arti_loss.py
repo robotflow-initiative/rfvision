@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from robotflow.rflearner.builder import LOSSES
+from rfvision.models.builder import LOSSES
 
 DIVISION_EPS = 1e-10
 

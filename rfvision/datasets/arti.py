@@ -4,7 +4,7 @@ ARTI is a dataset created by Liu Liu (@liuliu66)
 import os
 import numpy as np
 import open3d as o3d
-import robotflow.rflib as rflib
+import rflib
 import json
 from torch.utils.data import Dataset
 import copy

@@ -3,10 +3,11 @@ import os
 import numpy as np
 import torch
 import collections
-import robotflow
-from robotflow.rflearner.datasets import Custom3DDataset,DATASETS
-from robotflow.rflearner.datasets.pipelines import Compose
-from robotflow.rflib.utils import print_log
+from . import DATASETS
+from .custom3d import Custom3DDataset
+from .pipelines import Compose
+import rflib
+from rflib.utils import print_log
 ID_CLASSES = {"02691156": "airplane",
               "02808440": "bathtub",
               "02818832": "bed",
@@ -68,7 +69,7 @@ class KeypointNetDataset(Custom3DDataset):
         # split
         annos_split = []
         if self.split == 'all':
-            annos = robotflow.rflib.load(os.path.join(self.anno_root,'all.json'))
+            annos = rflib.load(os.path.join(self.anno_root,'all.json'))
             for anno in annos:
                 if anno['class_id'] in ID:
                     annos_split.append(anno)
@@ -84,7 +85,7 @@ class KeypointNetDataset(Custom3DDataset):
                     split_set = f.readlines()
             ID_split = tuple(i[9:].rstrip('\n') for i in split_set if i[:8] in ID)
             for CLASS in self.CLASSES:
-                annos = robotflow.rflib.load(os.path.join(self.anno_root, f'{CLASS}.json'))
+                annos = rflib.load(os.path.join(self.anno_root, f'{CLASS}.json'))
                 for anno in annos:
                     if anno['model_id'] in ID_split:
                         annos_split.append(anno)

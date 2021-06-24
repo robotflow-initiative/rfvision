@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from robotflow.rflearner.builder import BACKBONES
-from robotflow.rflib.ops import PointFPModule, PointSAModule
-from robotflow.rflib.runner import auto_fp16
+from rfvision.models.builder import BACKBONES
+from rflib.ops import PointFPModule, PointSAModule
+from rflib.runner import auto_fp16
 
 
 @BACKBONES.register_module()

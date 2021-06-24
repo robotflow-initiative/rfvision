@@ -1,7 +1,7 @@
 import torch
 from torch import nn as nn
-from robotflow.rflearner.builder import HEADS
-from robotflow.rflearner.bricks.utils import ImageFeatureModule, ImageMLPModule, append_img_feat, sample_valid_seeds
+from rfvision.models.builder import HEADS
+from rfvision.components.utils import ImageFeatureModule, ImageMLPModule, append_img_feat, sample_valid_seeds
 from .vote_head import VoteHead
 
 class _VoteHead(VoteHead):

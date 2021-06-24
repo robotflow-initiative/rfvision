@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from abc import abstractmethod
 
-from robotflow.rflib._ext import boxes_overlap_bev_gpu
+from rflib._ext import boxes_overlap_bev_gpu
 from .utils import limit_period, xywhr2xyxyr
 
 

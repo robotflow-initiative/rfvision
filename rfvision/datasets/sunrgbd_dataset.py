@@ -2,10 +2,10 @@ import numpy as np
 from collections import OrderedDict
 from os import path as osp
 
-from robotflow.rflearner.core import show_result
-from robotflow.rflearner.core.bbox3d import DepthInstance3DBoxes
-from robotflow.rflearner.core import eval_map
-from robotflow.rflearner.datasets import DATASETS
+from rfvision.core import show_result
+from rfvision.core.bbox3d import DepthInstance3DBoxes
+from rfvision.core import eval_map
+from . import DATASETS
 from .custom3d import Custom3DDataset
 
 

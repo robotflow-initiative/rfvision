@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from rflib.cnn import ConvModule
 from rflib.runner import BaseModule, auto_fp16
 
-from ..builder import NECKS
+from rfvision.models.builder import NECKS
 
 
 @NECKS.register_module()

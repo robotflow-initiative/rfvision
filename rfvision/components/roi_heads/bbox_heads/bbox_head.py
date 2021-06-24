@@ -6,8 +6,8 @@ from torch.nn.modules.utils import _pair
 
 from rfvision.core import build_bbox_coder, multi_apply, multiclass_nms
 from rfvision.models.builder import HEADS, build_loss
-from rfvision.models.losses import accuracy
-from rfvision.models.utils import build_linear_layer
+from rfvision.components.losses import accuracy
+from rfvision.components.utils import build_linear_layer
 
 
 @HEADS.register_module()

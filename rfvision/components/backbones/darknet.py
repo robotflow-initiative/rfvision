@@ -7,7 +7,7 @@ from rflib.cnn import ConvModule
 from rflib.runner import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from ..builder import BACKBONES
+from rfvision.models.builder import BACKBONES
 
 
 class ResBlock(BaseModule):

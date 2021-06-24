@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from rflib.cnn import ConvModule
 from rflib.runner import BaseModule
 
-from ..builder import BACKBONES
+from rfvision.models.builder import BACKBONES
 from ..utils import ResLayer
 from .resnet import BasicBlock
 

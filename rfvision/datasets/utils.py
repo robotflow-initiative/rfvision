@@ -5,8 +5,8 @@ from rflib.runner.hooks import HOOKS, Hook
 
 from rfvision.datasets.builder import PIPELINES
 from rfvision.datasets.pipelines import LoadAnnotations, LoadImageFromFile
-from rfvision.models.roi_heads.mask_heads import FusedSemanticHead
-from rfvision.models.dense_heads import RPNHead
+from rfvision.components.roi_heads.mask_heads import FusedSemanticHead
+from rfvision.components.dense_heads import RPNHead
 
 
 def replace_ImageToTensor(pipelines):

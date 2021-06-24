@@ -1,4 +1,4 @@
-from robotflow.rflearner.builder import build_detector, DETECTORS
+from rfvision.models.builder import build_detector, DETECTORS
 import numpy as np
 from ..detectors import BaseDetector
 

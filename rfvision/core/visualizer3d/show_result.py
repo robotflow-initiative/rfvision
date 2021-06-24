@@ -1,4 +1,4 @@
-import robotflow.rflib as rflib 
+import rflib as rflib 
 import numpy as np
 import trimesh
 from os import path as osp

@@ -1,7 +1,7 @@
-from robotflow.rflearner.bricks.backbones import BasePointNet
-from robotflow.rflib.ops import PointFPModule, PointSAModuleMSG
-from robotflow.rflib.runner import auto_fp16
-from robotflow.rflearner.builder import BACKBONES
+from rfvision.components.backbones import BasePointNet
+from rflib.ops import PointFPModule, PointSAModuleMSG
+from rflib.runner import auto_fp16
+from rfvision.models.builder import BACKBONES
 import torch.nn as nn
 import torch 
 import torch.nn.functional as F
@@ -46,7 +46,7 @@ class PointNet2ForSkeletonMerger(BasePointNet):
         return x, l4_features
 
 if __name__ == '__main__':
-    from robotflow.rflearner.utils import count_paras
+    from rfvision.utils import count_paras
     m = PointNet2ForSkeletonMerger(10).cuda()
     xyz = torch.rand(6, 2048, 9).cuda() # (batch_size, num_points, features(x,y,z + other_features))
     x, l4_features = m(xyz)

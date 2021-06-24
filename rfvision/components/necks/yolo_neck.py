@@ -1,11 +1,78 @@
 # Copyright (c) 2019 Western Digital Corporation or its affiliates.
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from rflib.cnn import ConvModule
+from rflib.cnn import ConvModule, xavier_init
 from rflib.runner import BaseModule
 
-from ..builder import NECKS
+from rfvision.models.builder import NECKS
+
+class SpatialPyramidPooling(nn.Module):
+    def __init__(self, pool_sizes=[5, 9, 13]):
+        super(SpatialPyramidPooling, self).__init__()
+
+        self.maxpools = nn.ModuleList([nn.MaxPool2d(pool_size, 1, pool_size // 2) for pool_size in pool_sizes])
+
+    def forward(self, x):
+        features = [maxpool(x) for maxpool in self.maxpools[::-1]]
+        features = torch.cat(features + [x], dim=1)
+        return features
+
+class FuseStage(nn.Module):
+    def __init__(self, 
+                 in_channels,
+                 is_reversal = False,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN', requires_grad=True),
+                 act_cfg=dict(type='Mish')):
+        super(FuseStage, self).__init__()
+        cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
+
+        if is_reversal:
+            self.right_conv = None
+            self.left_conv = ConvModule(in_channels, in_channels * 2, kernel_size=3, stride=2, padding = 1, **cfg)
+        else:
+            self.right_conv = nn.Sequential(ConvModule(in_channels, in_channels // 2, kernel_size = 1, stride = 1,**cfg),
+                                            nn.Upsample(scale_factor=2, mode='nearest'))
+            self.left_conv = ConvModule(in_channels, in_channels // 2, kernel_size = 1, stride = 1,**cfg)
+    def forward(self, data):
+        left, right = data
+        left = self.left_conv(left)
+        if self.right_conv:
+            right = self.right_conv(right)
+        return torch.cat((left, right), axis = 1)
+
+class MakeNConv(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 n,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN', requires_grad=True),
+                 act_cfg=dict(type='Mish')):
+        super().__init__()
+        cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
+        double_out_channels = out_channels * 2
+        if n == 3:
+            self.m = nn.Sequential(
+                ConvModule(in_channels, out_channels, kernel_size = 1, padding = 0,**cfg),
+                ConvModule(out_channels,double_out_channels, kernel_size = 3, padding = 1,**cfg),
+                ConvModule(double_out_channels, out_channels, kernel_size = 1, padding = 0,**cfg),
+            )
+        elif n == 5:
+            self.m = nn.Sequential(
+                ConvModule(in_channels, out_channels, kernel_size = 1, padding = 0,**cfg),
+                ConvModule(out_channels, double_out_channels, kernel_size = 3, padding = 1,**cfg),
+                ConvModule(double_out_channels, out_channels, kernel_size = 1, padding = 0,**cfg),
+                ConvModule(out_channels, double_out_channels, kernel_size = 3, padding = 1,**cfg),
+                ConvModule(double_out_channels, out_channels, kernel_size = 1, padding = 0,**cfg),
+            )
+        else:
+            raise NotImplementedError
+
+    def forward(self, x):
+        return self.m(x)
 
 
 class DetectionBlock(BaseModule):
@@ -137,3 +204,54 @@ class YOLOV3Neck(BaseModule):
             outs.append(out)
 
         return tuple(outs)
+
+
+@NECKS.register_module()
+class YOLOV4Neck(nn.Module):
+    '''
+    '''
+    
+    def __init__(self,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN', requires_grad=True),
+                 act_cfg=dict(type='Mish')):
+        super(YOLOV4Neck, self).__init__()
+        cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
+        
+        self.layers = nn.ModuleList([
+            # SPP
+            nn.Sequential(MakeNConv(1024, 512, 3,**cfg,),
+                          SpatialPyramidPooling(),
+                          MakeNConv(2048, 512, 3,**cfg)),
+            # PANet
+            nn.Sequential(FuseStage(512, **cfg),
+                          MakeNConv(512, 256, 5,**cfg)),
+             
+            nn.Sequential(FuseStage(256, **cfg),
+                          MakeNConv(256, 128, 5,**cfg)),
+             
+            nn.Sequential(FuseStage(128, **cfg, is_reversal=True),
+                          MakeNConv(512,256, 5, **cfg)),
+             
+            nn.Sequential(FuseStage(256, **cfg, is_reversal=True),
+                          MakeNConv(1024,512, 5,**cfg))
+            ])
+        
+    def forward(self, x):
+        out3, out4, out5 = x
+        out5 = self.layers[0](out5)
+        out4 = self.layers[1]([out4, out5])
+
+        out3 = self.layers[2]([out3, out4])
+        out4 = self.layers[3]([out3, out4])
+        out5 = self.layers[4]([out4, out5])
+
+        return (out5, out4, out3)
+
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                xavier_init(m, distribution='uniform')
+                
+                
+                

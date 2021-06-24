@@ -5,7 +5,7 @@ from rflib.cnn import Scale
 from rflib.runner import force_fp32
 
 from rfvision.core import distance2bbox, multi_apply, multiclass_nms, reduce_mean
-from ..builder import HEADS, build_loss
+from rfvision.models.builder import HEADS, build_loss
 from .anchor_free_head import AnchorFreeHead
 
 INF = 1e8

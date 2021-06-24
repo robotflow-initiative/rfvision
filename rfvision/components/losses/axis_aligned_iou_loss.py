@@ -1,9 +1,9 @@
 import torch
 from torch import nn as nn
 
-from robotflow.rflearner.builder import LOSSES
-from robotflow.rflearner.bricks.losses.utils import weighted_loss
-from robotflow.rflearner.core.bbox3d import AxisAlignedBboxOverlaps3D
+from rfvision.models.builder import LOSSES
+from rfvision.components.losses.utils import weighted_loss
+from rfvision.core.bbox3d import AxisAlignedBboxOverlaps3D
 
 
 @weighted_loss

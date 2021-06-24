@@ -1,8 +1,8 @@
-import robotflow.rflib as rflib
+import rflib
 import os
 
-from tools.data_converter.scannet_data_utils import ScanNetData
-from tools.data_converter.sunrgbd_data_utils import SUNRGBDData
+from .scannet_data_utils import ScanNetData
+from .sunrgbd_data_utils import SUNRGBDData
 
 
 def create_indoor_info_file(data_path,

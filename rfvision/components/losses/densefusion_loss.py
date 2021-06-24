@@ -1,8 +1,8 @@
 from torch.nn.modules.loss import _Loss
 import torch
-from robotflow.rflib.ops import KNearestNeighbor
-from robotflow.rflearner.builder import LOSSES
-from robotflow.rflearner.bricks.utils.knn import knn_search
+from rflib.ops import KNearestNeighbor
+from rfvision.models.builder import LOSSES
+from rfvision.components.utils.knn import knn_search
 
 
 def loss_refinement(pred_r, pred_t, target, model_points, idx, points, num_point_mesh, sym_list):

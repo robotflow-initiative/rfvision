@@ -2,7 +2,7 @@ import torch.nn as nn
 from rflib.cnn import ConvModule
 
 from rfvision.models.builder import HEADS
-from rfvision.models.utils import build_linear_layer
+from rfvision.components.utils import build_linear_layer
 from .bbox_head import BBoxHead
 
 

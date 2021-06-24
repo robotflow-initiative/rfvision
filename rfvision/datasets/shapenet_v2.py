@@ -1,9 +1,9 @@
 import os
 import h5py
 import numpy as np
-from robotflow.rflearner.datasets import DATASETS
-from robotflow.rflearner.datasets.pipelines import Compose
-from robotflow.rflearner.datasets import Custom3DDataset
+from . import DATASETS
+from .pipelines import Compose
+from .custom3d import Custom3DDataset
 
 @DATASETS.register_module()
 class ShapeNetCoreV2ForSkeletonMerger:

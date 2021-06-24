@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from rfvision.core import bbox_overlaps
-from ..builder import LOSSES
+from rfvision.models.builder import LOSSES
 from .utils import weighted_loss
 
 

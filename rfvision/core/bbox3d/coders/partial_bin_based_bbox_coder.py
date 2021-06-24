@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-from robotflow.rflearner.core.bbox import BaseBBoxCoder
-from robotflow.rflearner.core.bbox.builder import BBOX_CODERS
+from rfvision.core.bbox import BaseBBoxCoder
+from rfvision.core.bbox.builder import BBOX_CODERS
 
 
 @BBOX_CODERS.register_module()

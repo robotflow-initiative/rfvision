@@ -1,16 +1,16 @@
 import numpy as np
 import torch
-from robotflow.rflib.runner import force_fp32
+from rflib.runner import force_fp32
 from torch import nn as nn
 from torch.nn import functional as F
 
-from robotflow.rflearner.core.post_processing3d import aligned_3d_nms
-from robotflow.rflearner.builder import build_loss, HEADS
-from robotflow.rflearner.bricks.losses import chamfer_distance
-from robotflow.rflearner.bricks.utils import VoteModule
-from robotflow.rflib.ops import build_sa_module, furthest_point_sample
-from robotflow.rflearner.core import build_bbox_coder, multi_apply
-from robotflow.rflearner.bricks.dense_heads import BaseConvBboxHead
+from rfvision.core.post_processing3d import aligned_3d_nms
+from rfvision.models.builder import build_loss, HEADS
+from rfvision.components.losses import chamfer_distance
+from rfvision.components.utils import VoteModule
+from rflib.ops import build_sa_module, furthest_point_sample
+from rfvision.core import build_bbox_coder, multi_apply
+from rfvision.components.dense_heads import BaseConvBboxHead
 
 
 @HEADS.register_module()

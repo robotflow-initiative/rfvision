@@ -1,6 +1,6 @@
-from robotflow.rflib.cnn import ConvModule, kaiming_init, constant_init
-from robotflow.rflearner.bricks.utils.yolo_large_utils import make_divisible, make_round, CSPBlock1
-from robotflow.rflearner.builder import BACKBONES
+from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rfvision.components.utils.yolo_large_utils import make_divisible, make_round, CSPBlock1
+from rfvision.models.builder import BACKBONES
 
 import torch.nn as nn
 from collections import OrderedDict

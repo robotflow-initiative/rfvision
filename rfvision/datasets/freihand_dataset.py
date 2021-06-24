@@ -1,11 +1,11 @@
 import os
-import robotflow.rflib
+import rflib
 import numpy as np
 from torch.utils.data import Dataset
 import torch
-from robotflow.rflearner.datasets import DATASETS
-from robotflow.rflearner.datasets.pipelines import Compose
-from robotflow.rflearner.bricks.utils.handtailor_utils import (hm_to_kp2d, uvd2xyz, get_pck_all)
+from . import DATASETS
+from .pipelines import Compose
+from rfvision.components.utils.handtailor_utils import (hm_to_kp2d, uvd2xyz, get_pck_all)
 
 @DATASETS.register_module()
 class FreiHandDataset(Dataset):
@@ -22,10 +22,10 @@ class FreiHandDataset(Dataset):
         self.split = split
         self.training_root = os.path.join(self.data_root, 'training')
         # loading
-        self.training_scale = robotflow.rflib.load(os.path.join(self.data_root, 'training_scale.json')) * 4
-        self.training_mano = robotflow.rflib.load(os.path.join(self.data_root, 'training_mano.json')) * 4
-        self.training_K = robotflow.rflib.load(os.path.join(self.data_root, 'training_K.json')) * 4
-        self.training_xyz = robotflow.rflib.load(os.path.join(self.data_root, 'training_xyz.json')) * 4
+        self.training_scale = rflib.load(os.path.join(self.data_root, 'training_scale.json')) * 4
+        self.training_mano = rflib.load(os.path.join(self.data_root, 'training_mano.json')) * 4
+        self.training_K = rflib.load(os.path.join(self.data_root, 'training_K.json')) * 4
+        self.training_xyz = rflib.load(os.path.join(self.data_root, 'training_xyz.json')) * 4
 
         # split train / test
         split_ratio = 0.9
@@ -45,7 +45,7 @@ class FreiHandDataset(Dataset):
 
     def __getitem__(self, idx):
         idx = self.split_id[idx]  # map index
-        rgb = robotflow.rflib.imread(os.path.join(self.training_root, 'rgb', '%08d' % idx + '.jpg'))
+        rgb = rflib.imread(os.path.join(self.training_root, 'rgb', '%08d' % idx + '.jpg'))
         results = {
             'img': rgb,
             'scale': np.float32(self.training_scale[idx]),

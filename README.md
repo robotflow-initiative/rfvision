@@ -22,17 +22,17 @@ This project is released under the [Apache 2.0 license](./LICENSE).
    + [ ] DCT-Mask
    + [x] FCOS
    + [ ] SOLOv2
-   + [x] YOLOv4
+   + [x] YOLOv3/3-tiny/4/4-tiny/4-large
    + [x] USD-Seg
    + [ ] ContourRender
 2. 3D Object Detection
-   + [ ] VoteNet
-   + [ ] ImVoteNet
+   + [x] VoteNet
+   + [x] ImVoteNet
 3. Object Pose Estimation
-   + [ ] DenseFusion
+   + [x] DenseFusion
    + [ ] OMAD
 4. Hand-Object Manipulation
-   + [ ] HandTailor
+   + [x] HandTailor
    + [ ] CPF
    + [ ] Artiboost
 5. Multi-modality

@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 from rflib.runner import BaseModule
 
-from ..builder import build_shared_head
+from rfvision.models.builder import build_shared_head
 
 
 class BaseRoIHead(BaseModule, metaclass=ABCMeta):

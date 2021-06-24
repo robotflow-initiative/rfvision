@@ -1,6 +1,6 @@
 from torch import nn as nn
 
-from robotflow.rflearner.builder import DETECTORS, build_backbone, build_head, build_neck
+from rfvision.models.builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import Base3DDetector
 
 

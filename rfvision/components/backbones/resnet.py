@@ -6,7 +6,7 @@ from rflib.cnn import build_conv_layer, build_norm_layer, build_plugin_layer
 from rflib.runner import BaseModule
 from torch.nn.modules.batchnorm import _BatchNorm
 
-from ..builder import BACKBONES
+from rfvision.models.builder import BACKBONES
 from ..utils import ResLayer
 
 

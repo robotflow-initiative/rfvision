@@ -3,11 +3,11 @@ import torch
 import torch.nn.functional as F
 import logging
 from torch.nn.modules.batchnorm import _BatchNorm
-from robotflow.rflib.cnn import kaiming_init, constant_init
-from robotflow.rflib.runner import load_checkpoint
-from robotflow.rflearner.bricks.utils.handtailor_utils import (normalize_quaternion, quaternion_to_angle_axis,
+from rflib.cnn import kaiming_init, constant_init
+from rflib.runner import load_checkpoint
+from rfvision.components.utils.handtailor_utils import (normalize_quaternion, quaternion_to_angle_axis,
                                                                quaternion_mul, quaternion_inv)
-from robotflow.rflearner.builder import BACKBONES
+from rfvision.models.builder import BACKBONES
 
 
 @BACKBONES.register_module()

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from robotflow.rflearner.builder import NECKS
+from rfvision.models.builder import NECKS
 
 
 @NECKS.register_module()

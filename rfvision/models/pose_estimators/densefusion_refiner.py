@@ -1,4 +1,4 @@
-from robotflow.rflearner.builder import build_neck,build_head,DETECTORS
+from rfvision.models.builder import build_neck,build_head,DETECTORS
 import torch
 from ..detectors import BaseDetector
 

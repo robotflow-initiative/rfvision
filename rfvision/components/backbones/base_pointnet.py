@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from robotflow.rflib.runner import load_checkpoint
+from rflib.runner import load_checkpoint
 from torch import nn as nn
 
 
@@ -15,7 +15,7 @@ class BasePointNet(nn.Module, metaclass=ABCMeta):
         # Do not initialize the conv layers
         # to follow the original implementation
         if isinstance(pretrained, str):
-            from robotflow.rflearner.utils import get_root_logger
+            from rfvision.utils import get_root_logger
             logger = get_root_logger()
             load_checkpoint(self, pretrained, strict=False, logger=logger)
 

@@ -1,10 +1,10 @@
 import torch
-from robotflow.rflib.cnn import ConvModule
-from robotflow.rflib.runner import auto_fp16
+from rflib.cnn import ConvModule
+from rflib.runner import auto_fp16
 from torch import nn as nn
 
-from robotflow.rflib.ops import build_sa_module
-from robotflow.rflearner.builder import BACKBONES
+from rflib.ops import build_sa_module
+from rfvision.models.builder import BACKBONES
 from .base_pointnet import BasePointNet
 
 

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from robotflow.rflearner.builder import build_loss, HEADS
+from rfvision.models.builder import build_loss, HEADS
 
 
 @HEADS.register_module()

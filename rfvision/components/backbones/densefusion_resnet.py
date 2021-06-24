@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from robotflow.rflearner.builder import BACKBONES
+from rfvision.models.builder import BACKBONES
 from .resnet import ResNet
 
 

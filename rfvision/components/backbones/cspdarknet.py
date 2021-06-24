@@ -5,10 +5,10 @@ This impementation based on https://github.com/hhaAndroid/mmdetection-mini
 import torch
 import torch.nn as nn
 from torch.nn.modules.batchnorm import _BatchNorm
-from robotflow.rflib.cnn import ConvModule, kaiming_init, constant_init
-from robotflow.rflib.runner import load_checkpoint
+from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rflib.runner import load_checkpoint
 import logging
-from robotflow.rflearner.builder import BACKBONES
+from rfvision.models.builder import BACKBONES
 
 class ResBlock(nn.Module):
     def __init__(self, 

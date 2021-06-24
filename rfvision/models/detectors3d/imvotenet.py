@@ -2,9 +2,9 @@ import numpy as np
 import torch
 from torch import nn as nn
 
-from robotflow.rflearner.core import bbox3d2result, merge_aug_bboxes_3d
-from robotflow.rflearner.models.utils import MLP
-from robotflow.rflearner.builder import DETECTORS, build_backbone, build_neck, build_head, build_fusion_layer
+from rfvision.core import bbox3d2result, merge_aug_bboxes_3d
+from rfvision.components.utils import MLP
+from rfvision.models.builder import DETECTORS, build_backbone, build_neck, build_head, build_fusion_layer
 from .base import Base3DDetector
 
 

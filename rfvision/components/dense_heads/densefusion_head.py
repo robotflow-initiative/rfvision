@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from robotflow.rflearner.builder import build_loss
-from robotflow.rflearner.builder import HEADS
+from rfvision.models.builder import build_loss, HEADS
 
 
 @HEADS.register_module()

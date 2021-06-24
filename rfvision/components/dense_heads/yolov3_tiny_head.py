@@ -6,8 +6,8 @@ import torch.nn as nn
 import torch
 from torch.nn.modules.batchnorm import _BatchNorm
 from .yolo_head import YOLOV3Head
-from robotflow.rflearner.builder import HEADS
-from robotflow.rflib.cnn import ConvModule, kaiming_init, constant_init
+from rfvision.models.builder import HEADS
+from rflib.cnn import ConvModule, kaiming_init, constant_init
 
 @HEADS.register_module()
 class YOLOV3TinyHead(YOLOV3Head):

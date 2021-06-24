@@ -1,8 +1,8 @@
 import torch
 
-from robotflow.rflearner.core.bbox3d import bbox3d2result
-from robotflow.rflearner.core.post_processing3d import merge_aug_bboxes_3d
-from robotflow.rflearner.builder import DETECTORS
+from rfvision.core.bbox3d import bbox3d2result
+from rfvision.core.post_processing3d import merge_aug_bboxes_3d
+from rfvision.models.builder import DETECTORS
 from .single_stage import SingleStage3DDetector
 
 

@@ -2,7 +2,7 @@ import torch.nn as nn
 from rflib.cnn import ConvModule
 from rflib.runner import BaseModule, ModuleList
 
-from rfvision.models.backbones.resnet import Bottleneck
+from rfvision.components.backbones.resnet import Bottleneck
 from rfvision.models.builder import HEADS
 from .bbox_head import BBoxHead
 

@@ -1,4 +1,4 @@
-import robotflow.rflib as rflib
+import rflib
 
 from . import voxel_generator
 

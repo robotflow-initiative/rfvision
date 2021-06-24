@@ -1,13 +1,13 @@
 import copy
-import robotflow.rflib as rflib
+import rflib
 import torch
-from robotflow.rflib.parallel import DataContainer as DC
-from robotflow.rflib.runner import auto_fp16
+from rflib.parallel import DataContainer as DC
+from rflib.runner import auto_fp16
 from os import path as osp
 
-from robotflow.rflearner.core.bbox3d import Box3DMode
-from robotflow.rflearner.models.detectors import BaseDetector
-from robotflow.rflearner.core.visualizer3d import show_result
+from rfvision.core.bbox3d import Box3DMode
+from rfvision.models.detectors import BaseDetector
+from rfvision.core.visualizer3d import show_result
 
 class Base3DDetector(BaseDetector):
     """Base class for detectors."""

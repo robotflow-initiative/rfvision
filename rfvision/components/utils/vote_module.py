@@ -1,9 +1,9 @@
 import torch
-from robotflow.rflib import is_tuple_of
-from robotflow.rflib.cnn import ConvModule
+from rflib import is_tuple_of
+from rflib.cnn import ConvModule
 from torch import nn as nn
 
-from robotflow.rflearner.builder import build_loss
+from rfvision.models.builder import build_loss
 
 
 class VoteModule(nn.Module):

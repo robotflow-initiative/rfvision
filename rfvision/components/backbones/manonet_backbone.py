@@ -1,8 +1,8 @@
 import torch.nn as nn
 import torch
-from robotflow.rflearner.bricks.backbones import ResNet
-from robotflow.rflearner.builder import BACKBONES
-from robotflow.rflearner.bricks.utils.handtailor_utils import uvd2xyz
+from rfvision.components.backbones import ResNet
+from rfvision.models.builder import BACKBONES
+from rfvision.components.utils.handtailor_utils import uvd2xyz
 
 
 @BACKBONES.register_module()

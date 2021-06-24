@@ -2,8 +2,8 @@ import numpy as np
 import torch
 
 from rfvision.core import bbox2roi
-from rfvision.models.losses import SmoothL1Loss
-from ..builder import HEADS
+from rfvision.components.losses import SmoothL1Loss
+from rfvision.models.builder import HEADS
 from .standard_roi_head import StandardRoIHead
 
 EPS = 1e-15

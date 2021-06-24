@@ -2,7 +2,7 @@ import torch
 from torch import nn as nn
 from torch.nn.functional import l1_loss, mse_loss, smooth_l1_loss
 
-from robotflow.rflearner.builder import LOSSES
+from rfvision.models.builder import LOSSES
 
 
 def chamfer_distance(src,

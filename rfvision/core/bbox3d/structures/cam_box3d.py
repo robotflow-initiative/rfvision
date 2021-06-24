@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from robotflow.rflearner.core.points import BasePoints
+from rfvision.core.points import BasePoints
 from .base_box3d import BaseInstance3DBoxes
 from .utils import limit_period, rotation_3d_in_axis
 
