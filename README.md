@@ -7,6 +7,9 @@ The project takes a lot of design ideas from the great project [mmcv](https://gi
 
 But for robot vision where real-time visual servo, multi-modal perception are of more interest, RFVision is the project for you.
 
+## TODO
+1. [ ] VisionFlow: make the builder hierarchical, so that we can chain the models through robotflow.
+
 ## License
 This project is released under the [Apache 2.0 license](./LICENSE).
 

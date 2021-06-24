@@ -1,7 +1,5 @@
 import warnings
 
-import torch
-
 from rfvision.core import bbox2result
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
