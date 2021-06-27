@@ -6,7 +6,7 @@ import numpy as np
 from rflib import Config, DictAction
 
 from rfvision.core.evaluation import eval_map
-from rfvision.core.visualization import imshow_gt_det_bboxes
+from rfvision.core.visualizer import imshow_gt_det_bboxes
 from rfvision.datasets import build_dataset, get_loading_pipeline
 
 

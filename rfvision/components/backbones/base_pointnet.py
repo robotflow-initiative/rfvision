@@ -10,14 +10,14 @@ class BasePointNet(nn.Module, metaclass=ABCMeta):
         super(BasePointNet, self).__init__()
         self.fp16_enabled = False
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, init_cfg=None):
         """Initialize the weights of PointNet backbone."""
         # Do not initialize the conv layers
         # to follow the original implementation
-        if isinstance(pretrained, str):
+        if isinstance(init_cfg, str):
             from rfvision.utils import get_root_logger
             logger = get_root_logger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
 
     @staticmethod
     def _split_point_feats(points):

@@ -17,10 +17,9 @@ class YOLOV3(SingleStageDetector):
                  bbox_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None,
                  init_cfg=None):
         super(YOLOV3, self).__init__(backbone, neck, bbox_head, train_cfg,
-                                     test_cfg, pretrained, init_cfg)
+                                     test_cfg, init_cfg)
 
 
 @DETECTORS.register_module()
@@ -32,15 +31,15 @@ class YOLOV4Tiny(SingleStageDetector):
                  bbox_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
         super(YOLOV4Tiny, self).__init__(backbone, neck, bbox_head, train_cfg,
-                                         test_cfg, pretrained)
+                                         test_cfg, init_cfg)
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
-        elif pretrained is None:
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
+        elif init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)
@@ -56,15 +55,15 @@ class YOLOV3Tiny(SingleStageDetector):
                  bbox_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
         super(YOLOV3Tiny, self).__init__(backbone, neck, bbox_head, train_cfg,
-                                         test_cfg, pretrained)
+                                         test_cfg, init_cfg)
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
-        elif pretrained is None:
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
+        elif init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)
@@ -81,15 +80,15 @@ class YOLOV4(SingleStageDetector):
                  bbox_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
         super(YOLOV4, self).__init__(backbone, neck, bbox_head, train_cfg,
-                                         test_cfg, pretrained)
+                                         test_cfg, init_cfg)
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
-        elif pretrained is None:
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
+        elif init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)

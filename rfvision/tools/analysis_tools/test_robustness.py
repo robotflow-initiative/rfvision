@@ -197,7 +197,7 @@ def main():
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
-    cfg.model.pretrained = None
+    cfg.model.init_cfg = None
     cfg.data.test.test_mode = True
     if args.workers == 0:
         args.workers = cfg.data.workers_per_gpu

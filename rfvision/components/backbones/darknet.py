@@ -72,7 +72,6 @@ class Darknet(BaseModule):
         norm_eval (bool): Whether to set norm layers to eval mode, namely,
             freeze running stats (mean and var). Note: Effect on Batch Norm
             and its variants only.
-        pretrained (str, optional): model pretrained path. Default: None
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None
 
@@ -105,7 +104,6 @@ class Darknet(BaseModule):
                  norm_cfg=dict(type='BN', requires_grad=True),
                  act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
                  norm_eval=True,
-                 pretrained=None,
                  init_cfg=None):
         super(Darknet, self).__init__(init_cfg)
         if depth not in self.arch_settings:
@@ -131,23 +129,18 @@ class Darknet(BaseModule):
 
         self.norm_eval = norm_eval
 
-        assert not (init_cfg and pretrained), \
-            'init_cfg and pretrained cannot be setting at the same time'
-        if isinstance(pretrained, str):
-            warnings.warn('DeprecationWarning: pretrained is deprecated, '
-                          'please use "init_cfg" instead')
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
-        elif pretrained is None:
-            if init_cfg is None:
-                self.init_cfg = [
-                    dict(type='Kaiming', layer='Conv2d'),
-                    dict(
-                        type='Constant',
-                        val=1,
-                        layer=['_BatchNorm', 'GroupNorm'])
-                ]
+        if init_cfg is None:
+            self.init_cfg = [
+                dict(type='Kaiming', layer='Conv2d'),
+                dict(
+                    type='Constant',
+                    val=1,
+                    layer=['_BatchNorm', 'GroupNorm'])
+            ]
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
         else:
-            raise TypeError('pretrained must be a str or None')
+            raise TypeError('init_cfg must be a str or None')
 
     def forward(self, x):
         outs = []

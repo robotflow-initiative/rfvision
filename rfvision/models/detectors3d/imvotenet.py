@@ -66,7 +66,7 @@ class ImVoteNet(Base3DDetector):
                  num_sampled_seed=None,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
 
         super(ImVoteNet, self).__init__()
 
@@ -131,22 +131,22 @@ class ImVoteNet(Base3DDetector):
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
-        self.init_weights(pretrained=pretrained)
+        self.init_weights(init_cfg=init_cfg)
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, init_cfg=None):
         """Initialize model weights."""
-        super(ImVoteNet, self).init_weights(pretrained)
-        if pretrained is None:
-            img_pretrained = None
-            pts_pretrained = None
-        elif isinstance(pretrained, dict):
-            img_pretrained = pretrained.get('img', None)
-            pts_pretrained = pretrained.get('pts', None)
+        super(ImVoteNet, self).init_weights(init_cfg)
+        if init_cfg is None:
+            img_init_cfg = None
+            pts_init_cfg = None
+        elif isinstance(init_cfg, dict):
+            img_init_cfg = init_cfg.get('img', None)
+            pts_init_cfg = init_cfg.get('pts', None)
         else:
             raise ValueError(
-                f'pretrained should be a dict, got {type(pretrained)}')
+                f'init_cfg should be a dict, got {type(init_cfg)}')
         if self.with_img_backbone:
-            self.img_backbone.init_weights(pretrained=img_pretrained)
+            self.img_backbone.init_weights(init_cfg=img_init_cfg)
         if self.with_img_neck:
             if isinstance(self.img_neck, nn.Sequential):
                 for m in self.img_neck:
@@ -155,11 +155,11 @@ class ImVoteNet(Base3DDetector):
                 self.img_neck.init_weights()
 
         if self.with_img_roi_head:
-            self.img_roi_head.init_weights(img_pretrained)
+            self.img_roi_head.init_weights(img_init_cfg)
         if self.with_img_rpn:
             self.img_rpn_head.init_weights()
         if self.with_pts_backbone:
-            self.pts_backbone.init_weights(pretrained=pts_pretrained)
+            self.pts_backbone.init_weights(init_cfg=pts_init_cfg)
         if self.with_pts_bbox:
             self.pts_bbox_head.init_weights()
         if self.with_pts_neck:

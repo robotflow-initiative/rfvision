@@ -44,11 +44,11 @@ class IKNetBackbone(nn.Module):
         so3 = so3.view(-1, 16 * 3)
         return so3, quat
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
-        elif pretrained is None:
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
+        elif init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)
@@ -56,7 +56,7 @@ class IKNetBackbone(nn.Module):
                     constant_init(m, 1)
 
         else:
-            raise TypeError('pretrained must be a str or None')
+            raise TypeError('init_cfg must be a str or None')
 
     @staticmethod
     def loss_ik(pred_quat, gt_quat):

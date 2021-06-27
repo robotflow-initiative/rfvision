@@ -50,7 +50,7 @@ def main():
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
-    cfg.model.pretrained = None
+    cfg.model.init_cfg = None
     cfg.data.test.test_mode = True
 
     # build the dataloader

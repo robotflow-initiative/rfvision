@@ -1,8 +1,8 @@
-from robotflow.rflib.cnn import ConvModule
-from robotflow.rflib.cnn.bricks import build_conv_layer
+from rflib.cnn import ConvModule
+from rflib.cnn.bricks import build_conv_layer
 from torch import nn as nn
 
-from robotflow.rflearner.builder import HEADS
+from rfvision.models.builder import HEADS
 
 
 @HEADS.register_module()

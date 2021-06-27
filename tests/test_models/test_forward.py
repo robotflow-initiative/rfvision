@@ -45,7 +45,7 @@ def _get_detector_cfg(fname):
 def test_sparse_rcnn_forward():
     config_path = 'sparse_rcnn/sparse_rcnn_r50_fpn_1x_coco.py'
     model = _get_detector_cfg(config_path)
-    model['pretrained'] = None
+    model['init_cfg'] = None
     from rfvision.models import build_detector
     detector = build_detector(model)
     detector.init_weights()
@@ -105,7 +105,7 @@ def test_sparse_rcnn_forward():
 
 def test_rpn_forward():
     model = _get_detector_cfg('rpn/rpn_r50_fpn_1x_coco.py')
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -151,7 +151,7 @@ def test_single_stage_forward_gpu(cfg_file):
         pytest.skip('test requires GPU and torch+cuda')
 
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -188,7 +188,7 @@ def test_single_stage_forward_gpu(cfg_file):
 def test_faster_rcnn_ohem_forward():
     model = _get_detector_cfg(
         'faster_rcnn/faster_rcnn_r50_fpn_ohem_1x_coco.py')
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -250,7 +250,7 @@ def test_two_stage_forward(cfg_file):
         with_semantic = False
 
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     # Save cost
     if cfg_file in [
@@ -305,7 +305,7 @@ def test_two_stage_forward(cfg_file):
     'cfg_file', ['ghm/retinanet_ghm_r50_fpn_1x_coco.py', 'ssd/ssd300_coco.py'])
 def test_single_stage_forward_cpu(cfg_file):
     model = _get_detector_cfg(cfg_file)
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -417,7 +417,7 @@ def _demo_mm_inputs(input_shape=(1, 3, 300, 300),
 
 def test_yolact_forward():
     model = _get_detector_cfg('yolact/yolact_r50_1x8_coco.py')
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -456,7 +456,7 @@ def test_yolact_forward():
 
 def test_detr_forward():
     model = _get_detector_cfg('detr/detr_r50_8x2_150e_coco.py')
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -511,7 +511,7 @@ def test_detr_forward():
 
 def test_kd_single_stage_forward():
     model = _get_detector_cfg('ld/ld_r18_gflv1_r101_fpn_coco_1x.py')
-    model['pretrained'] = None
+    model['init_cfg'] = None
 
     from rfvision.models import build_detector
     detector = build_detector(model)
@@ -573,7 +573,7 @@ def test_inference_detector():
     num_class = 3
     model_dict = dict(
         type='RetinaNet',
-        pretrained=None,
+        init_cfg=None,
         backbone=dict(
             type='ResNet',
             depth=18,

@@ -40,7 +40,7 @@ class PSPUpsample(nn.Module):
 
 class PSPNet(nn.Module):
     def __init__(self, n_classes=21, sizes=(1, 2, 3, 6), psp_size=2048, deep_features_size=1024, depth=18,
-                  pretrained=False):
+                  init_cfg=False):
         super(PSPNet, self).__init__()
         self.feats = ResNet(depth,                            
                             out_indices=(2,3),

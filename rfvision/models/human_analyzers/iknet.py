@@ -6,15 +6,15 @@ from rfvision.models import BaseDetector
 class IKNet(BaseDetector):
     def __init__(self,
                  backbone,
-                 pretrained=None,
+                 init_cfg=None,
                  **kwargs,):
         super().__init__()
         self.backbone = build_backbone(backbone)
-        self.init_weights(pretrained=pretrained)
+        self.init_weights(init_cfg=init_cfg)
 
-    def init_weights(self, pretrained=None):
-        super(IKNet, self).init_weights(pretrained)
-        self.backbone.init_weights(pretrained)
+    def init_weights(self, init_cfg=None):
+        super(IKNet, self).init_weights(init_cfg)
+        self.backbone.init_weights(init_cfg)
 
     def forward_train(self, joints_xyz, quat):
         gt_joints_xyz = joints_xyz

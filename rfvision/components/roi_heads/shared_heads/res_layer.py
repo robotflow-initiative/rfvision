@@ -21,7 +21,6 @@ class ResLayer(BaseModule):
                  norm_eval=True,
                  with_cp=False,
                  dcn=None,
-                 pretrained=None,
                  init_cfg=None):
         super(ResLayer, self).__init__(init_cfg)
 
@@ -47,23 +46,18 @@ class ResLayer(BaseModule):
             dcn=dcn)
         self.add_module(f'layer{stage + 1}', res_layer)
 
-        assert not (init_cfg and pretrained), \
-            'init_cfg and pretrained cannot be setting at the same time'
-        if isinstance(pretrained, str):
-            warnings.warn('DeprecationWarning: pretrained is a deprecated, '
-                          'please use "init_cfg" instead')
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
-        elif pretrained is None:
-            if init_cfg is None:
-                self.init_cfg = [
-                    dict(type='Kaiming', layer='Conv2d'),
-                    dict(
-                        type='Constant',
-                        val=1,
-                        layer=['_BatchNorm', 'GroupNorm'])
-                ]
+        if init_cfg is None:
+            self.init_cfg = [
+                dict(type='Kaiming', layer='Conv2d'),
+                dict(
+                    type='Constant',
+                    val=1,
+                    layer=['_BatchNorm', 'GroupNorm'])
+            ]
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
         else:
-            raise TypeError('pretrained must be a str or None')
+            raise TypeError('init_cfg must be a str or None')
 
     @auto_fp16()
     def forward(self, x):

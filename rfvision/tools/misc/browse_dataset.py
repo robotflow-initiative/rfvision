@@ -6,7 +6,7 @@ import rflib
 from rflib import Config, DictAction
 
 from rfvision.core.utils import mask2ndarray
-from rfvision.core.visualization import imshow_det_bboxes
+from rfvision.core.visualizer import imshow_det_bboxes
 from rfvision.datasets.builder import build_dataset
 
 

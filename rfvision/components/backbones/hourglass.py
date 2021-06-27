@@ -110,7 +110,6 @@ class HourglassNet(BaseModule):
             HourglassModule.
         feat_channel (int): Feature channel of conv after a HourglassModule.
         norm_cfg (dict): Dictionary to construct and config norm layer.
-        pretrained (str, optional): model pretrained path. Default: None
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None
 
@@ -134,7 +133,6 @@ class HourglassNet(BaseModule):
                  stage_blocks=(2, 2, 2, 2, 2, 4),
                  feat_channel=256,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 pretrained=None,
                  init_cfg=None):
         assert init_cfg is None, 'To prevent abnormal initialization ' \
                                  'behavior, init_cfg is not allowed to be set'

@@ -61,7 +61,8 @@ class YOLOV4TinyBackbone(nn.Module):
     def __init__(self,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='LeakyReLU', negative_slope=0.1)
+                 act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
+                 init_cfg=None,
                  ):
         super(YOLOV4TinyBackbone, self).__init__()
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
@@ -80,11 +81,11 @@ class YOLOV4TinyBackbone(nn.Module):
 
         self.layers = nn.Sequential(backbone)
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
-        elif pretrained is None:
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
+        elif init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)

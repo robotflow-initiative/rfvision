@@ -86,9 +86,9 @@ def test_config_build_detector():
         config_mod.model
         print(f'Building detector, config_fpath = {config_fpath}')
 
-        # Remove pretrained keys to allow for testing in an offline environment
-        if 'pretrained' in config_mod.model:
-            config_mod.model['pretrained'] = None
+        # Remove pretrained/init_cfg keys to allow for testing in an offline environment
+        if 'init_cfg' in config_mod.model:
+            config_mod.model['init_cfg'] = None
 
         detector = build_detector(config_mod.model)
         assert detector is not None

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import torch
 
-from rfvision.core import visualization as vis
+from rfvision.core import visualizer as vis
 
 
 def test_color():

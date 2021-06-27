@@ -1,1 +1,0 @@
--r 2d.txt #if you install from pip, the path will add 'requirements/' automatically, but in setup.py, it should be individually handled.

@@ -15,13 +15,13 @@ class USDSegYOLOV3(YOLOV3):
                  bbox_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None,
+                 init_cfg=None,
                  num_bases=-1,
                  bases_path=None,
                  method='None',
                  use_mask_loss=False):
         super(USDSegYOLOV3, self).__init__(backbone, neck, bbox_head,
-                                           train_cfg, test_cfg, pretrained)
+                                           train_cfg, test_cfg, init_cfg)
 
         self.register_buffer('bases', torch.tensor(np.load(bases_path)).float())
         assert num_bases == len(self.bases)
@@ -79,13 +79,13 @@ class USDSegFCOS(FCOS):
                  bbox_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None,
+                 init_cfg=None,
                  method='None',
                  bases_path=None,
                  num_bases=-1
                  ):
         super(USDSegFCOS, self).__init__(backbone, neck, bbox_head, train_cfg,
-                                   test_cfg, pretrained)
+                                   test_cfg, init_cfg)
         if method not in ['cosine']:
             raise RuntimeError('%s method is not supported!' % method)
         self.method = method

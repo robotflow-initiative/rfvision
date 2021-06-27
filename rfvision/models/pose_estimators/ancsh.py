@@ -13,7 +13,7 @@ class ANCSH(BaseDetector):
                  train_cfg,
                  test_cfg,
                  nocs_head=None,
-                 pretrained=None):
+                 init_cfg=None):
         super(ANCSH, self).__init__()
 
         self.backbone = build_backbone(backbone)

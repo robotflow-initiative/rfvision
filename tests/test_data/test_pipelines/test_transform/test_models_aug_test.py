@@ -13,7 +13,7 @@ def model_aug_test_template(cfg_file):
     # get config
     cfg = rflib.Config.fromfile(cfg_file)
     # init model
-    cfg.model.pretrained = None
+    cfg.model.init_cfg = None
     cfg.model.train_cfg = None
     model = build_detector(cfg.model)
 
@@ -100,7 +100,7 @@ def test_cornernet_aug_test():
     cfg = rflib.Config.fromfile(
         'configs/cornernet/cornernet_hourglass104_mstest_10x5_210e_coco.py')
     # init model
-    cfg.model.pretrained = None
+    cfg.model.init_cfg = None
     cfg.model.train_cfg = None
     model = build_detector(cfg.model)
 

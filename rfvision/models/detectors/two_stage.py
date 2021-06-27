@@ -21,13 +21,9 @@ class TwoStageDetector(BaseDetector):
                  roi_head=None,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None,
                  init_cfg=None):
         super(TwoStageDetector, self).__init__(init_cfg)
-        if pretrained:
-            warnings.warn('DeprecationWarning: pretrained is deprecated, '
-                          'please use "init_cfg" instead')
-            backbone.pretrained = pretrained
+        backbone.init_cfg = init_cfg
         self.backbone = build_backbone(backbone)
 
         if neck is not None:
@@ -45,7 +41,7 @@ class TwoStageDetector(BaseDetector):
             rcnn_train_cfg = train_cfg.rcnn if train_cfg is not None else None
             roi_head.update(train_cfg=rcnn_train_cfg)
             roi_head.update(test_cfg=test_cfg.rcnn)
-            roi_head.pretrained = pretrained
+            roi_head.init_cfg = init_cfg
             self.roi_head = build_head(roi_head)
 
         self.train_cfg = train_cfg

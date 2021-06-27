@@ -338,7 +338,6 @@ class ResNet(BaseModule):
             memory while slowing down the training speed.
         zero_init_residual (bool): Whether to use zero init for last norm layer
             in resblocks to let them behave as identity.
-        pretrained (str, optional): model pretrained path. Default: None
         init_cfg (dict or list[dict], optional): Initialization config dict.
             Default: None
 
@@ -386,7 +385,6 @@ class ResNet(BaseModule):
                  plugins=None,
                  with_cp=False,
                  zero_init_residual=True,
-                 pretrained=None,
                  init_cfg=None):
         super(ResNet, self).__init__(init_cfg)
         self.zero_init_residual = zero_init_residual
@@ -394,35 +392,31 @@ class ResNet(BaseModule):
             raise KeyError(f'invalid depth {depth} for resnet')
 
         block_init_cfg = None
-        assert not (init_cfg and pretrained), \
-            'init_cfg and pretrained cannot be setting at the same time'
-        if isinstance(pretrained, str):
-            warnings.warn('DeprecationWarning: pretrained is deprecated, '
-                          'please use "init_cfg" instead')
-            self.init_cfg = dict(type='Pretrained', checkpoint=pretrained)
-        elif pretrained is None:
-            if init_cfg is None:
-                self.init_cfg = [
-                    dict(type='Kaiming', layer='Conv2d'),
-                    dict(
+
+        if init_cfg is None:
+            self.init_cfg = [
+                dict(type='Kaiming', layer='Conv2d'),
+                dict(
+                    type='Constant',
+                    val=1,
+                    layer=['_BatchNorm', 'GroupNorm'])
+            ]
+            block = self.arch_settings[depth][0]
+            if self.zero_init_residual:
+                if block is BasicBlock:
+                    block_init_cfg = dict(
                         type='Constant',
-                        val=1,
-                        layer=['_BatchNorm', 'GroupNorm'])
-                ]
-                block = self.arch_settings[depth][0]
-                if self.zero_init_residual:
-                    if block is BasicBlock:
-                        block_init_cfg = dict(
-                            type='Constant',
-                            val=0,
-                            override=dict(name='norm2'))
-                    elif block is Bottleneck:
-                        block_init_cfg = dict(
-                            type='Constant',
-                            val=0,
-                            override=dict(name='norm3'))
+                        val=0,
+                        override=dict(name='norm2'))
+                elif block is Bottleneck:
+                    block_init_cfg = dict(
+                        type='Constant',
+                        val=0,
+                        override=dict(name='norm3'))
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
         else:
-            raise TypeError('pretrained must be a str or None')
+            raise TypeError('init_cfg must be a str or None')
 
         self.depth = depth
         if stem_channels is None:

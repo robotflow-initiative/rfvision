@@ -386,7 +386,7 @@ def test_resnet_backbone():
 
     with pytest.raises(TypeError):
         # pretrained must be a string path
-        model = ResNet(50, pretrained=0)
+        model = ResNet(50, init_cfg=0)
         model.init_weights()
 
     with pytest.raises(AssertionError):
@@ -401,7 +401,7 @@ def test_resnet_backbone():
 
     # Test ResNet50 with torchvision pretrained weight
     model = ResNet(
-        depth=50, norm_eval=True, pretrained='torchvision://resnet50')
+        depth=50, norm_eval=True, init_cfg='torchvision://resnet50')
     model.init_weights()
     model.train()
     assert check_norm_state(model.modules(), False)

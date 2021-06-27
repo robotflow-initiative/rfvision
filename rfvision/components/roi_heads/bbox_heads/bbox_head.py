@@ -91,6 +91,10 @@ class BBoxHead(BaseModule):
                     dict(
                         type='Normal', std=0.001, override=dict(name='fc_reg'))
                 ]
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
+        else:
+            raise TypeError('init_cfg must be a str or None')
 
     @property
     def custom_cls_channels(self):

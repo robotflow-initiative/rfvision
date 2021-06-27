@@ -104,16 +104,16 @@ class YOLOV4LargeBackbone(nn.Module):
                 feats += (feat,)
         return feats
     
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             pass
-        elif pretrained is None:
+        elif init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d):
                     kaiming_init(m)
                 elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
                     constant_init(m, 1)
         else:
-            raise TypeError('pretrained must be a str or None')
+            raise TypeError('init_cfg must be a str or None')
             
  

@@ -13,12 +13,12 @@ class SkeletonMerger(BaseDetector):
     def __init__(self,
                  backbone, 
                  head,
-                 pretrained=None,
+                 init_cfg=None,
                  **kwargs):
         super().__init__()
         self.backbone = build_backbone(backbone)
         self.head = build_head(head)
-        self.init_weights(pretrained)
+        self.init_weights(init_cfg)
 
     def forward_train(self, points):
         APP_PT = torch.cat([points, points, points], -1)
@@ -78,11 +78,11 @@ class SkeletonMerger(BaseDetector):
             img_name = os.path.join(out_dir, metas['model_id'] + '.png')
             vis.capture_screen_image(img_name, do_render=True)
 
-    def init_weights(self, pretrained=None):
-        if isinstance(pretrained, str):
+    def init_weights(self, init_cfg=None):
+        if isinstance(init_cfg, str):
             from rfvision.utils import get_root_logger
             logger = get_root_logger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
+            load_checkpoint(self, init_cfg, strict=False, logger=logger)
 
     def simple_test(self, img, img_metas, **kwargs):
         pass

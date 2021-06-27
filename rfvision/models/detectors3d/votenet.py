@@ -15,13 +15,13 @@ class VoteNet(SingleStage3DDetector):
                  bbox_head=None,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
         super(VoteNet, self).__init__(
             backbone=backbone,
             bbox_head=bbox_head,
             train_cfg=train_cfg,
             test_cfg=test_cfg,
-            pretrained=pretrained)
+            init_cfg=init_cfg)
 
     def extract_feat(self, points, img_metas=None):
         """Directly extract features from the backbone+neck.

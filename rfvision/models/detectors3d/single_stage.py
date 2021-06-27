@@ -18,7 +18,7 @@ class SingleStage3DDetector(Base3DDetector):
             Defaults to None.
         test_cfg (dict, optional): Config dict of test hyper-parameters.
             Defaults to None.
-        pretrained (str, optional): Path of pretrained models.
+        init_cfg (str, optional): Path of pretrained models.
             Defaults to None.
     """
 
@@ -28,7 +28,7 @@ class SingleStage3DDetector(Base3DDetector):
                  bbox_head=None,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
         super(SingleStage3DDetector, self).__init__()
         self.backbone = build_backbone(backbone)
         if neck is not None:
@@ -38,12 +38,12 @@ class SingleStage3DDetector(Base3DDetector):
         self.bbox_head = build_head(bbox_head)
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
-        self.init_weights(pretrained=pretrained)
+        self.init_weights(init_cfg=init_cfg)
 
-    def init_weights(self, pretrained=None):
+    def init_weights(self, init_cfg=None):
         """Initialize weights of detector."""
-        super(SingleStage3DDetector, self).init_weights(pretrained)
-        self.backbone.init_weights(pretrained=pretrained)
+        super(SingleStage3DDetector, self).init_weights(init_cfg)
+        self.backbone.init_weights(init_cfg=init_cfg)
         if self.with_neck:
             if isinstance(self.neck, nn.Sequential):
                 for m in self.neck:

@@ -19,8 +19,7 @@ from .manonet_backbone import ManoNetBackbone
 
 __all__ = [
     'ResNet', 'ResNetV1d', 'ResNeXt',
-    'HourglassNet', 'DetectoRS_ResNet',
-    'DetectoRS_ResNeXt', 'Darknet',
+    'HourglassNet','Darknet',
 
     'CSPDarknet', 'YOLOV3TinyBackbone', 'YOLOV4TinyBackbone',
     'DenseFusionResNet', 'PointNet2ForArticulation', 'PointNet2SASSG',

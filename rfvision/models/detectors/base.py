@@ -7,7 +7,7 @@ import torch
 import torch.distributed as dist
 from rflib.runner import BaseModule, auto_fp16
 
-from rfvision.core.visualization import imshow_det_bboxes
+from rfvision.core.visualizer import imshow_det_bboxes
 
 
 class BaseDetector(BaseModule, metaclass=ABCMeta):

@@ -106,6 +106,10 @@ class ConvFCBBoxHead(BBoxHead):
                         dict(name='reg_fcs')
                     ])
             ]
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
+        else:
+            raise TypeError('init_cfg must be a str or None')
 
     def _add_conv_fc_branch(self,
                             num_branch_convs,

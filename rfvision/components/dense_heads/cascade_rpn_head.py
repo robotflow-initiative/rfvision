@@ -147,6 +147,10 @@ class StageCascadeRPNHead(RPNHead):
                 type='Normal', std=0.01, override=[dict(name='rpn_reg')])
             if self.with_cls:
                 self.init_cfg['override'].append(dict(name='rpn_cls'))
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
+        else:
+            raise TypeError('init_cfg must be a str or None')
 
     def _init_layers(self):
         """Init layers of a CascadeRPN stage."""
