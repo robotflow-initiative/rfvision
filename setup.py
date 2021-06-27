@@ -129,7 +129,7 @@ if __name__ == '__main__':
     setup(
         name='rfvision',
         version=get_version(),
-        description='RobotFlown Robot Vision Toolbox and Benchmark',
+        description='RobotFlow Robot Vision Toolbox and Benchmark',
         long_description=readme(),
         long_description_content_type='text/markdown',
         author='RobotFlow',
