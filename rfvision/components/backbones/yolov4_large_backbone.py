@@ -1,4 +1,5 @@
 from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rflib.runner import BaseModule
 from rfvision.components.utils.yolo_large_utils import make_divisible, make_round, CSPBlock1
 from rfvision.models.builder import BACKBONES
 
@@ -8,13 +9,14 @@ from torch.nn.modules.batchnorm import _BatchNorm
 
 
 @BACKBONES.register_module()
-class YOLOV4LargeBackbone(nn.Module):
+class YOLOV4LargeBackbone(BaseModule):
     def __init__(self,
                  stage_name='P5',
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='Mish')):
-        super().__init__()
+                 act_cfg=dict(type='Mish'),
+                 init_cfg=None):
+        super(YOLOV4LargeBackbone, self).__init__(init_cfg)
         self.cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         assert stage_name in ['P5','P6','P7']
         

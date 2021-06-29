@@ -5,7 +5,7 @@ ARTI is a dataset created by Liu Liu (@liuliu66)
 import os.path as osp
 from collections.abc import Sequence
 
-import robotflow.rflib as rflib
+import rflib
 import open3d as o3d
 import numpy as np
 import copy
@@ -13,9 +13,9 @@ import torch
 import h5py
 import pycocotools.mask as maskUtils
 
-from robotflow.rflib.parallel import DataContainer as DC
+from rflib.parallel import DataContainer as DC
 
-from robotflow.rflearner.datasets.arti_utils import point_3d_offset_joint
+from rfvision.datasets.arti_utils import point_3d_offset_joint
 from ..builder import PIPELINES
 
 def estimateSimilarityUmeyama(SourceHom, TargetHom, rt_pre=None):

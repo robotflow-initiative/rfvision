@@ -1,11 +1,11 @@
 import numpy as np
-from robotflow.rflib import is_tuple_of
-from robotflow.rflib.utils import build_from_cfg
+from rflib import is_tuple_of
+from rflib.utils import build_from_cfg
 
-from robotflow.rflearner.core import VoxelGenerator
-from robotflow.rflearner.core.bbox3d import box_np_ops
-from robotflow.rflearner.datasets.builder import PIPELINES, OBJECTSAMPLERS
-from robotflow.rflearner.datasets.pipelines import RandomFlip
+from rfvision.core import VoxelGenerator
+from rfvision.core.bbox3d import box_np_ops
+from rfvision.datasets.builder import PIPELINES, OBJECTSAMPLERS
+from rfvision.datasets.pipelines import RandomFlip
 from .data_augment_utils import noise_per_object_v3_
 
 

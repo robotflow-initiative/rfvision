@@ -391,7 +391,7 @@ class ImVoteNet(Base3DDetector):
             img_metas (list[dict]): list of image and point cloud meta info
                 dict. For example, keys include 'ori_shape', 'img_norm_cfg',
                 and 'transformation_3d_flow'. For details on the values of
-                the keys see `robotflow/rflearner/datasets/pipelines/formatting.py:Collect`.
+                the keys see `rfvision/datasets/pipelines/formatting.py:Collect`.
             gt_bboxes (list[torch.Tensor]): Ground truth bboxes for each image
                 with shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
             gt_labels (list[torch.Tensor]): class indices for each

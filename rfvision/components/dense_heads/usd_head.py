@@ -1120,7 +1120,7 @@ class USDSegFCOSHead(FCOSHead):
                 shape (N, num_points * 1, H, W).
             img_metas (list[dict]): Meta information of each image, e.g.,
                 image size, scaling factor, etc.
-            cfg (robotflow.rflib.Config | None): Test / postprocessing configuration,
+            cfg (rflib.Config | None): Test / postprocessing configuration,
                 if None, test_cfg would be used. Default: None.
             rescale (bool): If True, return boxes in original image space.
                 Default: False.
@@ -1189,7 +1189,7 @@ class USDSegFCOSHead(FCOSHead):
                 (height, width, 3).
             scale_factor (ndarray): Scale factor of the image arrange as
                 (w_scale, h_scale, w_scale, h_scale).
-            cfg (robotflow.rflib.Config | None): Test / postprocessing configuration,
+            cfg (rflib.Config | None): Test / postprocessing configuration,
                 if None, test_cfg would be used.
             rescale (bool): If True, return boxes in original image space.
                 Default: False.
@@ -1240,7 +1240,7 @@ class USDSegFCOSHead(FCOSHead):
             mlvl_bboxes /= mlvl_bboxes.new_tensor(scale_factor)
         mlvl_scores = torch.cat(mlvl_scores)
         padding = mlvl_scores.new_zeros(mlvl_scores.shape[0], 1)
-        # remind that we set FG labels to [0, num_class-1] since robotflow v2.0
+        # remind that we set FG labels to [0, num_class-1]
         # BG cat_id: num_class
         mlvl_scores = torch.cat([mlvl_scores, padding], dim=1)
         mlvl_centerness = torch.cat(mlvl_centerness)

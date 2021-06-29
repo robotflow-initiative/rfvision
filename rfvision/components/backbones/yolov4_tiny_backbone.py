@@ -10,9 +10,10 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from rfvision.models.builder import BACKBONES
 from rflib.cnn import ConvModule, kaiming_init, constant_init
 from rflib.runner import load_checkpoint
+from rflib.runner import BaseModule
 
 
-class ResConv2dBatchLeaky(nn.Module):
+class ResConv2dBatchLeaky(BaseModule):
     def __init__(self,
                  in_channels,
                  inter_channels,
@@ -21,8 +22,9 @@ class ResConv2dBatchLeaky(nn.Module):
                  return_extra=False,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='LeakyReLU', negative_slope=0.1)):
-        super(ResConv2dBatchLeaky, self).__init__()
+                 act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
+                 init_cfg=None):
+        super(ResConv2dBatchLeaky, self).__init__(init_cfg)
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
         self.return_extra = return_extra
@@ -57,14 +59,14 @@ class ResConv2dBatchLeaky(nn.Module):
 
 
 @BACKBONES.register_module()
-class YOLOV4TinyBackbone(nn.Module):
+class YOLOV4TinyBackbone(BaseModule):
     def __init__(self,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
                  act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
                  init_cfg=None,
                  ):
-        super(YOLOV4TinyBackbone, self).__init__()
+        super(YOLOV4TinyBackbone, self).__init__(init_cfg)
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         backbone = OrderedDict([
             ('0_convbatch', ConvModule(3, 32, 3, 2, 1, **cfg)),

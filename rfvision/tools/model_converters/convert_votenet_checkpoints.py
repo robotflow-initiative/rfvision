@@ -1,10 +1,10 @@
 import argparse
 import tempfile
 import torch
-from robotflow.rflib import Config
-from robotflow.rflib.runner import load_state_dict
+from rflib import Config
+from rflib.runner import load_state_dict
 
-from robotflow.rflearner.builder import build_detector
+from rfvision.models.builder import build_detector
 
 
 def parse_args():

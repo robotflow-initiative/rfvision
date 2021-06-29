@@ -2,10 +2,10 @@ import numpy as np
 import random
 from torchvision.transforms import functional
 import cv2
-import robotflow.rflib
-from robotflow.rflearner.bricks.utils.handtailor_utils import (get_affine_transform,
+import rflib
+from rfvision.components.utils.handtailor_utils import (get_affine_transform,
                     gen_cam_param, gen_heatmap, transform_coords, DEPTH_RANGE, DEPTH_MIN)
-from robotflow.rflearner.datasets import PIPELINES
+from rfvision.datasets import PIPELINES
 
 
 @PIPELINES.register_module()
@@ -112,7 +112,7 @@ class HandTailorPipeline:
             # img
             affinetrans_for_cv = affinetrans[:2, :]  # shape (2, 3)
             img_processed = cv2.warpAffine(img, affinetrans_for_cv, (W, H))
-            img_processed = robotflow.rflib.impad(img_processed, shape=self.img_shape)
+            img_processed = rflib.impad(img_processed, shape=self.img_shape)
             img_processed = self.normalize(img_processed)
 
             # heatmap
@@ -143,7 +143,7 @@ class HandTailorPipeline:
             # img
             affinetrans_for_cv = affinetrans[:2, :]  # shape (2, 3)
             img_processed = cv2.warpAffine(img, affinetrans_for_cv, (W, H))
-            img_processed = robotflow.rflib.impad(img_processed, shape=self.img_shape)
+            img_processed = rflib.impad(img_processed, shape=self.img_shape)
             img_processed = self.normalize(img_processed)
 
             # heatmap

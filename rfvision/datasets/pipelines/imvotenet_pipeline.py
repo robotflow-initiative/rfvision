@@ -1,7 +1,7 @@
 import numpy as np
-import robotflow
+import rflib
 import os
-from robotflow.rflearner.datasets.builder import PIPELINES
+from rfvision.datasets.builder import PIPELINES
 import torch 
 
 @PIPELINES.register_module()
@@ -63,7 +63,7 @@ class LoadImVote:
         
     def get_imvote(self, idx):
         # Read image
-        full_img = robotflow.rflib.imread(os.path.join(self.data_root, 'sunrgbd_trainval/image/', f'{idx:06d}.jpg'))
+        full_img = rflib.imread(os.path.join(self.data_root, 'sunrgbd_trainval/image/', f'{idx:06d}.jpg'))
         full_img_height = full_img.shape[0]
         full_img_width = full_img.shape[1]
         

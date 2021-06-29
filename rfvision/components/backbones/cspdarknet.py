@@ -7,19 +7,21 @@ import torch.nn as nn
 from torch.nn.modules.batchnorm import _BatchNorm
 from rflib.cnn import ConvModule, kaiming_init, constant_init
 from rflib.runner import load_checkpoint
+from rflib.runner import BaseModule
 import logging
 from rfvision.models.builder import BACKBONES
 
-class ResBlock(nn.Module):
+class ResBlock(BaseModule):
     def __init__(self, 
                  channels, 
                  hidden_channels=None,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='Mish')):
+                 act_cfg=dict(type='Mish'),
+                 init_cfg=None):
+        super(ResBlock, self).__init__(init_cfg)
+        
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
-        super().__init__()
-
         if hidden_channels is None:
             hidden_channels = channels
         self.block = nn.Sequential(
@@ -31,7 +33,7 @@ class ResBlock(nn.Module):
         return x + self.block(x)
 
 # CSPdarknet的结构块
-class CSPBlock(nn.Module):
+class CSPBlock(BaseModule):
     def __init__(self, 
                  in_channels, 
                  out_channels, 
@@ -39,8 +41,9 @@ class CSPBlock(nn.Module):
                  first,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='Mish')):
-        super().__init__()
+                 act_cfg=dict(type='Mish'),
+                 init_cfg=None):
+        super(CSPBlock, self).__init__(init_cfg)
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
         self.downsample_conv = ConvModule(in_channels, out_channels, 3, stride=2, padding=1, **cfg)
@@ -63,6 +66,8 @@ class CSPBlock(nn.Module):
                 ConvModule(out_channels // 2, out_channels // 2, 1, **cfg)
             )
             self.concat_conv = ConvModule(out_channels, out_channels, 1, **cfg)
+        
+        
 
     def forward(self, x):
         x = self.downsample_conv(x)
@@ -75,14 +80,14 @@ class CSPBlock(nn.Module):
 
 
 @BACKBONES.register_module()
-class CSPDarknet(nn.Module):    
+class CSPDarknet(BaseModule):    
     def __init__(self, 
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='Mish')):
+                 act_cfg=dict(type='Mish'),
+                 init_cfg=None):
+        super(CSPDarknet, self).__init__(init_cfg)
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
-        super().__init__()
-        
         self.layers,  = (1, 2, 8, 8, 4),
         self.channels = (32, 64, 128, 256, 512, 1024)
         
@@ -94,6 +99,19 @@ class CSPDarknet(nn.Module):
             CSPBlock(self.channels[3], self.channels[4], self.layers[3], first=False,**cfg),
             CSPBlock(self.channels[4], self.channels[5], self.layers[4], first=False,**cfg)
         ])
+
+        if init_cfg is None:
+            self.init_cfg = [
+                dict(type='Kaiming', layer='Conv2d'),
+                dict(
+                    type='Constant',
+                    val=1,
+                    layer=['_BatchNorm', 'GroupNorm'])
+            ]
+        elif isinstance(init_cfg, str):
+            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
+        else:
+            raise TypeError('init_cfg must be a str or None')
 
     def forward(self, x):
         x = self.conv0(x)

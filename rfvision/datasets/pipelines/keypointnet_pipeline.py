@@ -1,4 +1,4 @@
-from robotflow.rflearner.datasets import PIPELINES
+from rfvision.datasets import PIPELINES
 
 @PIPELINES.register_module()
 class NormalizePoints:

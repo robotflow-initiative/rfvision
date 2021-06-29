@@ -1,9 +1,9 @@
-import robotflow.rflib as rflib
+import rflib
 import numpy as np
 
-from robotflow.rflearner.core.points import BasePoints, get_points_type
-from robotflow.rflearner.datasets.builder import PIPELINES
-from robotflow.rflearner.datasets.pipelines import LoadAnnotations
+from rfvision.core.points import BasePoints, get_points_type
+from rfvision.datasets.builder import PIPELINES
+from rfvision.datasets.pipelines import LoadAnnotations
 
 
 @PIPELINES.register_module()

@@ -6,7 +6,7 @@ import random
 import torch
 import torchvision.transforms as transforms
 
-from robotflow.rflib.parallel import DataContainer as DC
+from rflib.parallel import DataContainer as DC
 
 from ..builder import PIPELINES
 

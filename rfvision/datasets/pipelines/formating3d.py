@@ -1,10 +1,10 @@
 import numpy as np
-from robotflow.rflib.parallel import DataContainer as DC
+from rflib.parallel import DataContainer as DC
 
-from robotflow.rflearner.core.bbox3d import BaseInstance3DBoxes
-from robotflow.rflearner.core.points import BasePoints
-from robotflow.rflearner.datasets.builder import PIPELINES
-from robotflow.rflearner.datasets.pipelines import to_tensor
+from rfvision.core.bbox3d import BaseInstance3DBoxes
+from rfvision.core.points import BasePoints
+from rfvision.datasets.builder import PIPELINES
+from rfvision.datasets.pipelines import to_tensor
 
 PIPELINES._module_dict.pop('DefaultFormatBundle')
 

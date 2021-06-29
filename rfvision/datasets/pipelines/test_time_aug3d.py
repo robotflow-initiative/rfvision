@@ -1,9 +1,9 @@
-import robotflow.rflib as rflib
+import rflib
 import warnings
 from copy import deepcopy
 
-from robotflow.rflearner.datasets.builder import PIPELINES
-from robotflow.rflearner.datasets.pipelines import Compose
+from rfvision.datasets.builder import PIPELINES
+from rfvision.datasets.pipelines import Compose
 
 
 @PIPELINES.register_module()

@@ -1,6 +1,6 @@
 import copy
 import inspect
-
+import cv2
 import rflib
 import numpy as np
 from numpy import random
@@ -8,6 +8,11 @@ from numpy import random
 from rfvision.core import PolygonMasks
 from rfvision.core.evaluation.bbox_overlaps import bbox_overlaps
 from ..builder import PIPELINES
+
+#import sklearn
+import pickle
+from PIL import Image
+import sklearn
 
 try:
     from imagecorruptions import corrupt
@@ -1903,3 +1908,144 @@ class CutOut:
                      else f'cutout_shape={self.candidates}, ')
         repr_str += f'fill_in={self.fill_in})'
         return repr_str
+
+
+        
+@PIPELINES.register_module()
+class LetterResize(object):
+    # https://github.com/hhaAndroid/mmdetection-mini
+    def __init__(self,
+                 img_scale=None,
+                 color=(114, 114, 114),
+                 auto=True,
+                 scaleFill=False,
+                 scaleup=True,
+                 backend='cv2'):
+        self.image_size_hw = img_scale
+        self.color = color
+        self.auto = auto
+        self.scaleFill = scaleFill
+        self.scaleup = scaleup
+        self.backend = backend
+
+    def __call__(self, results):
+        for key in results.get('img_fields', ['img']):
+            img = results[key]
+
+            shape = img.shape[:2]  # current shape [height, width]
+            if isinstance(self.image_size_hw, int):
+                self.image_size_hw = (self.image_size_hw, self.image_size_hw)
+
+            # Scale ratio (new / old)
+            r = min(self.image_size_hw[0] / shape[0], self.image_size_hw[1] / shape[1])
+            if not self.scaleup:  # only scale down, do not scale up (for better test mAP)
+                r = min(r, 1.0)
+            ratio = r, r
+            # save the best size of scaling
+            new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
+            # To obtain the specified output size, padding is needed.
+            dw, dh = self.image_size_hw[1] - new_unpad[0], self.image_size_hw[0] - new_unpad[1]  # wh padding
+            if self.auto:  # minimum rectangle
+                dw, dh = np.mod(dw, 64), np.mod(dh, 64)  # wh padding
+            elif self.scaleFill:  # stretch
+                dw, dh = 0.0, 0.0
+                # stretch the image to specified size forcedly
+                new_unpad = (self.image_size_hw[1], self.image_size_hw[0])
+                ratio = self.image_size_hw[1] / shape[1], self.image_size_hw[0] / shape[0]  # width, height ratios
+
+            # pad on left and right 
+            dw /= 2  # divide padding into 2 sides
+            dh /= 2
+
+            # before padding 
+            if shape[::-1] != new_unpad:  # resize
+                img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
+            results['img_shape'] = img.shape
+            scale_factor = np.array([ratio[0], ratio[1], ratio[0], ratio[1]], dtype=np.float32)
+            results['scale_factor'] = scale_factor
+
+            # padding
+            top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+            left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+            img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=self.color)  # add border
+
+            results[key] = img
+
+            results['pad_shape'] = img.shape
+            results['pad_param'] = np.array([top, bottom, left, right], dtype=np.float32)
+        return results
+
+@PIPELINES.register_module()
+class GenerateCoef(object):
+    def __init__(self, base_root, use_mask_bbox=False, scale=64, method='None', num_bases=-1,
+                 keep_resized_mask=False, preserve_gt_mask=False):
+        if sklearn.__version__ != '0.21.3':
+            raise RuntimeError('sklearn version 0.21.3 is required. However get %s' % sklearn.__version__)
+        with open(base_root, 'rb') as dico_file:
+            self.dico = pickle.load(dico_file)
+        self.dico.set_params(n_jobs=1)
+
+        self.use_mask_bbox = use_mask_bbox
+        self.scale = scale
+        if method not in ['cosine', 'cosine_r']:
+            raise NotImplementedError('%s not supported.' % method)
+        self.method = method
+        self.num_bases = num_bases
+        self.keep_resized_mask = keep_resized_mask
+        self.preserve_gt_mask = preserve_gt_mask
+
+    @staticmethod
+    def get_bbox(mask):
+        coords = np.transpose(np.nonzero(mask))
+        y, x, h, w = cv2.boundingRect(coords)
+        return x, y, w+1, h+1
+
+    def __call__(self, results):
+        scale = self.scale
+        if 'gt_masks' not in results:
+            raise RuntimeError('`gt_masks` is missing')
+        new_gt_bboxes = []
+        resized_gt_masks = []
+        coef_gt = []
+        for mask, bbox in zip(results['gt_masks'], results['gt_bboxes']):
+            if self.use_mask_bbox:
+                x1, y1, w, h = self.get_bbox(mask)
+                x2 = x1 + w
+                y2 = y1 + h
+                new_bbox = [x1, y1, x2, y2]
+                new_gt_bboxes.append(new_bbox)
+            else:
+                x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2])+1, int(bbox[3])+1  # hot fix
+                assert(x1 <= x2 and y1 <= y2)
+
+            obj_mask = mask[y1:y2, x1:x2].astype(np.uint8)  # {0, 1}
+
+            # resized_mask = cv.resize(resized_mask, (scale, scale), interpolation=cv.INTER_NEAREST)
+            resized_mask = Image.fromarray(obj_mask).resize((scale, scale), Image.NEAREST)
+            resized_mask = np.reshape(resized_mask, (1, scale*scale))
+
+            if self.method == 'cosine' or self.method == 'cosine_r':
+                resized_mask = resized_mask.astype(np.int) * 2 - 1  # {-1, 1}
+
+            coef = self.dico.transform(resized_mask)[0]  # TODO: Catch these warning
+            if self.method == 'cosine_r':
+                coef[0] /= 30.0
+                coef[1] /= 10.0
+
+            resized_gt_masks.append(resized_mask[0])
+            assert coef.shape[0] == self.num_bases
+            coef_gt.append(coef)
+
+        if self.use_mask_bbox:
+            results['gt_bboxes'] = np.stack(new_gt_bboxes)
+        if self.keep_resized_mask:
+            results['gt_resized_masks'] = np.stack(resized_gt_masks)  # should be {-1, 1} int Mask
+        if not self.preserve_gt_mask:
+            results.pop('gt_masks')  # No longer needed
+
+        if len(coef_gt) == 0:
+            results['gt_coefs'] = []
+        else:
+            results['gt_coefs'] = np.stack(coef_gt)
+
+        return results
