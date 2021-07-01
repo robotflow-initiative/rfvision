@@ -2,7 +2,6 @@ from .darknet import Darknet
 from .hourglass import HourglassNet
 from .resnet import ResNet, ResNetV1d
 from .resnext import ResNeXt
-
 from .cspdarknet import CSPDarknet
 from .yolov3_tiny_backbone import YOLOV3TinyBackbone
 from .yolov4_tiny_backbone import YOLOV4TinyBackbone
@@ -20,7 +19,6 @@ from .manonet_backbone import ManoNetBackbone
 __all__ = [
     'ResNet', 'ResNetV1d', 'ResNeXt',
     'HourglassNet','Darknet',
-
     'CSPDarknet', 'YOLOV3TinyBackbone', 'YOLOV4TinyBackbone',
     'DenseFusionResNet', 'PointNet2ForArticulation', 'PointNet2SASSG',
     'PointNet2SAMSG', 'YOLOV4LargeBackbone', 'PointNet2ForSkeletonMerger',

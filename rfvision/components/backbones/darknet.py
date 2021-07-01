@@ -76,7 +76,7 @@ class Darknet(BaseModule):
             Default: None
 
     Example:
-        >>> from rfvision.models import Darknet
+        >>> from rfvision.components import Darknet
         >>> import torch
         >>> self = Darknet(depth=53)
         >>> self.eval()
@@ -105,7 +105,7 @@ class Darknet(BaseModule):
                  act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
                  norm_eval=True,
                  init_cfg=None):
-        super(Darknet, self).__init__(init_cfg)
+        super(Darknet, self).__init__(None)
         if depth not in self.arch_settings:
             raise KeyError(f'invalid depth {depth} for darknet')
 

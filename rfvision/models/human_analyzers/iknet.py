@@ -13,7 +13,6 @@ class IKNet(BaseDetector):
         self.init_weights(init_cfg=init_cfg)
 
     def init_weights(self, init_cfg=None):
-        super(IKNet, self).init_weights(init_cfg)
         self.backbone.init_weights(init_cfg)
 
     def forward_train(self, joints_xyz, quat):

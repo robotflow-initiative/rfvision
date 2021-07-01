@@ -1,6 +1,5 @@
 from torch.nn.modules.loss import _Loss
 import torch
-from rflib.ops import KNearestNeighbor
 from rfvision.models.builder import LOSSES
 from rfvision.components.utils.knn import knn_search
 
@@ -50,7 +49,7 @@ def loss_refinement(pred_r, pred_t, target, model_points, idx, points, num_point
     if idx[0].item() in sym_list:
         target = target[0].transpose(1, 0).contiguous().view(3, 1)
         pred = pred.permute(2, 0, 1).contiguous().view(3, 1)
-        dist_mat, inds = knn_search(target.T, pred.T, k=1)
+        inds = knn_search(pred.T, target.T, k=1)
         target = torch.index_select(target, 1, inds.view(-1) - 1)
         target = target.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
         pred = pred.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
@@ -116,7 +115,7 @@ def loss_estimation(pred_r, pred_t, pred_c, target, model_points, idx, points, w
         if idx[0].item() in sym_list:
             target = target[0].transpose(1, 0).contiguous().view(3, -1)
             pred = pred.permute(2, 0, 1).contiguous().view(3, -1)
-            dist_mat, inds = knn_search(target.T, pred.T, k=1)
+            inds = knn_search(pred.T, target.T, k=1)
             target = torch.index_select(target, 1, inds.view(-1).detach() - 1)
             target = target.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
             pred = pred.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()

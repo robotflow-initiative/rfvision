@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch 
 import torch.nn.functional as F
 
-# @BACKBONES.register_module()
+@BACKBONES.register_module()
 class PointNet2ForSkeletonMerger(BasePointNet):
     def __init__(self, num_classes):
         super().__init__()

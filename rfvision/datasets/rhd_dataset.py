@@ -5,8 +5,6 @@ from torch.utils.data import Dataset
 from . import DATASETS
 from .pipelines import Compose
 
-
-
 @DATASETS.register_module()
 class RHDDataset(Dataset):
     CLASSES = None

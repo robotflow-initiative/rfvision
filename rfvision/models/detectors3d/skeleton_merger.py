@@ -6,8 +6,6 @@ import open3d as o3d
 import numpy as np
 import os
 
-
-
 @DETECTORS.register_module()
 class SkeletonMerger(BaseDetector):
     def __init__(self,
