@@ -10,6 +10,7 @@ from .ik_dataset import INVKDataset
 from .freihand_dataset import FreiHandDataset
 from .ycb_video import YCBVideoDataset
 from .arti import ArtiImgDataset, ArtiSynDataset, ArtiRealDataset
+from .sunrgbd_dataset import SUNRGBDDataset
 __all__ = [
     'CustomDataset', 'CocoDataset', 'GroupSampler', 'DistributedGroupSampler',
     'DistributedSampler', 'build_dataloader', 'ConcatDataset', 'RepeatDataset',
@@ -17,5 +18,5 @@ __all__ = [
     'build_dataset', 'replace_ImageToTensor', 'get_loading_pipeline',
     'NumClassCheckHook',
     'INVKDataset', 'FreiHandDataset', 'YCBVideoDataset', 'ArtiImgDataset',
-    'ArtiSynDataset', 'ArtiRealDataset'
+    'ArtiSynDataset', 'ArtiRealDataset', 'SUNRGBDDataset'
 ]

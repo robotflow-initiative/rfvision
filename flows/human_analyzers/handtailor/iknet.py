@@ -15,7 +15,6 @@ model = dict(
     backbone=dict(type='IKNetBackbone'),
     )
 
-
 data_root = '/home/hanyang/ik_dataset'
 data = dict(
     samples_per_gpu=256,

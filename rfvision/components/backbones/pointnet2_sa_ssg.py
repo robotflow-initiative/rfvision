@@ -4,7 +4,7 @@ from torch import nn as nn
 
 from rflib.ops import PointFPModule, build_sa_module
 from rfvision.models.builder import BACKBONES
-from .base_pointnet import BasePointNet
+from rfvision.components.backbones.base_pointnet import BasePointNet
 
 
 @BACKBONES.register_module()
@@ -134,3 +134,8 @@ class PointNet2SASSG(BasePointNet):
         ret = dict(
             fp_xyz=fp_xyz, fp_features=fp_features, fp_indices=fp_indices)
         return ret
+
+if __name__ == '__main__':
+    m = PointNet2SASSG(in_channels=6).cuda()
+    points = torch.rand(1, 2000, 6).cuda()
+    res = m(points)

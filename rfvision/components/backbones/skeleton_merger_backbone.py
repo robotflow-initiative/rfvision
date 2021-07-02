@@ -1,4 +1,4 @@
-from rfvision.components.backbones import BasePointNet
+from rfvision.components.backbones.base_pointnet import BasePointNet
 from rflib.ops import PointFPModule, PointSAModuleMSG
 from rflib.runner import auto_fp16
 from rfvision.models.builder import BACKBONES

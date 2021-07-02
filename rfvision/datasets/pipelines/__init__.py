@@ -17,7 +17,7 @@ from .arti_pipeline import (CreatePointData, LoadArtiPointData, DownSamplePointD
                             DefaultFormatBundleArti)
 
 from .densefusion_pipeline import (CreatePoseGT, DefaultPoseFormatBundle,
-                                   LoadPoseData, PoseImgPreprocess, )
+                                   LoadPoseData, PoseImgPreprocess,)
 from .dbsampler import DataBaseSampler
 from .formating3d import Collect3D, DefaultFormatBundle, DefaultFormatBundle3D
 from .loading3d import (LoadAnnotations3D, LoadMultiViewImageFromFiles,

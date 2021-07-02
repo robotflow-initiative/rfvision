@@ -25,7 +25,8 @@ class MLP(nn.Module):
                  conv_channels=(256, 256),
                  conv_cfg=dict(type='Conv1d'),
                  norm_cfg=dict(type='BN1d'),
-                 act_cfg=dict(type='ReLU')):
+                 act_cfg=dict(type='ReLU'),
+                 bias='auto'):
         super().__init__()
         self.mlp = nn.Sequential()
         prev_channels = in_channel
@@ -40,9 +41,13 @@ class MLP(nn.Module):
                     conv_cfg=conv_cfg,
                     norm_cfg=norm_cfg,
                     act_cfg=act_cfg,
-                    bias=True,
+                    bias=bias,
                     inplace=True))
             prev_channels = conv_channels[i]
 
     def forward(self, img_features):
         return self.mlp(img_features)
+
+
+if __name__ == '__main__':
+    m = MLP()

@@ -11,7 +11,8 @@ def _Bottleneck(inplanes, planes, expansion=2):
     downsample = None
     if inplanes != planes * expansion:
         downsample = nn.Conv2d(inplanes, planes * expansion, kernel_size=1)
-    return Bottleneck(inplanes, planes, expansion=expansion, downsample=downsample)
+    Bottleneck.expansion = expansion
+    return Bottleneck(inplanes, planes, downsample=downsample)
 
 
 def _make_residual(inplanes, planes, num_block):

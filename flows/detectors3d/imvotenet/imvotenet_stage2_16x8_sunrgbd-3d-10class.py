@@ -47,7 +47,7 @@ model = dict(
                             [0.404671, 1.071108, 1.688889],
                             [0.76584, 1.398258, 0.472728]]),
             pred_layer_cfg=dict(
-                in_channels=128, shared_conv_channels=(128, 128), bias=True),
+                in_channels=128, shared_conv_channels=(128, 128), bias='auto'),
             conv_cfg=dict(type='Conv1d'),
             norm_cfg=dict(type='BN1d'),
             objectness_loss=dict(

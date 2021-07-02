@@ -95,6 +95,8 @@ class BasicBlock(BaseModule):
 
 class Bottleneck(BaseModule):
 
+    expansion = 4
+
     def __init__(self,
                  inplanes,
                  planes,
@@ -108,7 +110,7 @@ class Bottleneck(BaseModule):
                  dcn=None,
                  plugins=None,
                  init_cfg=None,
-                 expansion=4):
+                 ):
         """Bottleneck block for ResNet.
 
         If style is "pytorch", the stride-two layer is the 3x3 conv layer, if
@@ -134,7 +136,6 @@ class Bottleneck(BaseModule):
         self.with_dcn = dcn is not None
         self.plugins = plugins
         self.with_plugins = plugins is not None
-        self.expansion = expansion
         if self.with_plugins:
             # collect plugins for conv1/conv2/conv3
             self.after_conv1_plugins = [
