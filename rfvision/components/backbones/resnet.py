@@ -94,6 +94,7 @@ class BasicBlock(BaseModule):
 
 
 class Bottleneck(BaseModule):
+
     expansion = 4
 
     def __init__(self,
@@ -108,7 +109,8 @@ class Bottleneck(BaseModule):
                  norm_cfg=dict(type='BN'),
                  dcn=None,
                  plugins=None,
-                 init_cfg=None):
+                 init_cfg=None,
+                 ):
         """Bottleneck block for ResNet.
 
         If style is "pytorch", the stride-two layer is the 3x3 conv layer, if
@@ -134,7 +136,6 @@ class Bottleneck(BaseModule):
         self.with_dcn = dcn is not None
         self.plugins = plugins
         self.with_plugins = plugins is not None
-
         if self.with_plugins:
             # collect plugins for conv1/conv2/conv3
             self.after_conv1_plugins = [
@@ -342,7 +343,7 @@ class ResNet(BaseModule):
             Default: None
 
     Example:
-        >>> from rfvision.models import ResNet
+        >>> from rfvision.components import ResNet
         >>> import torch
         >>> self = ResNet(depth=18)
         >>> self.eval()

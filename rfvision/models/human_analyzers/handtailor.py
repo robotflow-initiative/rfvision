@@ -1,4 +1,4 @@
-from rfvision.models.builder import DETECTORS, build_backbone, build_head, build_loss, build_detector
+from rfvision.models.builder import DETECTORS, build_backbone, build_loss, build_detector
 from rfvision.models import BaseDetector
 from rfvision.components.utils.handtailor_utils import hm_to_uvd
 from rflib.cnn import kaiming_init, constant_init

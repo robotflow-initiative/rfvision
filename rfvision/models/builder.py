@@ -12,6 +12,7 @@ SHARED_HEADS = MODELS
 HEADS = MODELS
 LOSSES = MODELS
 DETECTORS = MODELS
+FUSION_LAYERS = MODELS
 
 
 def build_backbone(cfg):
@@ -43,6 +44,9 @@ def build_loss(cfg):
     """Build loss."""
     return LOSSES.build(cfg)
 
+def build_fusion_layer(cfg):
+    """Build fusion layer."""
+    return FUSION_LAYERS.build(cfg)
 
 def build_detector(cfg, train_cfg=None, test_cfg=None):
     """Build detector."""

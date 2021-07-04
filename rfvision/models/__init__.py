@@ -1,8 +1,8 @@
 from .detectors import *  # noqa: F401,F403
-#from .detectors3d import *
-#from .human_analyzers import *
+from .detectors3d import *
+from .human_analyzers import *
 #from .point_generators import *
-#from .pose_estimators import *
+from .pose_estimators import *
 
 from .builder import (BACKBONES, DETECTORS, HEADS, LOSSES, NECKS,
                       ROI_EXTRACTORS, SHARED_HEADS, build_backbone,

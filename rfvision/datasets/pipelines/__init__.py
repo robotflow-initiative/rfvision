@@ -16,19 +16,19 @@ from .arti_pipeline import (CreatePointData, LoadArtiPointData, DownSamplePointD
                             CreatePartRelationGT, CreatePartMask, DownSampleArti,
                             DefaultFormatBundleArti)
 
-from .densefusion_pipeline import (CreatePoseGT,DefaultPoseFormatBundle,
-                                   LoadPoseData,PoseImgPreprocess,)
-from .dbsampler import DataBaseSampler                                   
+from .densefusion_pipeline import (CreatePoseGT, DefaultPoseFormatBundle,
+                                   LoadPoseData, PoseImgPreprocess,)
+from .dbsampler import DataBaseSampler
 from .formating3d import Collect3D, DefaultFormatBundle, DefaultFormatBundle3D
 from .loading3d import (LoadAnnotations3D, LoadMultiViewImageFromFiles,
-                      LoadPointsFromFile, LoadPointsFromMultiSweeps,
-                      NormalizePointsColor, PointSegClassMapping)
+                        LoadPointsFromFile, LoadPointsFromMultiSweeps,
+                        NormalizePointsColor, PointSegClassMapping)
 from .test_time_aug3d import MultiScaleFlipAug3D
 from .transforms3d import (BackgroundPointsFilter, GlobalRotScaleTrans,
-                            IndoorPointSample, ObjectNoise, ObjectRangeFilter,
-                            ObjectSample, PointShuffle, PointsRangeFilter,
-                            RandomFlip3D, VoxelBasedPointSampler)
-                            
+                           IndoorPointSample, ObjectNoise, ObjectRangeFilter,
+                           ObjectSample, PointShuffle, PointsRangeFilter,
+                           RandomFlip3D, VoxelBasedPointSampler)
+
 from .imvotenet_pipeline import LoadImVote
 from .handtailor_pipeline import HandTailorPipeline
 from .keypointnet_pipeline import NormalizePoints
@@ -42,10 +42,10 @@ __all__ = [
     'MinIoURandomCrop', 'Expand', 'PhotoMetricDistortion', 'Albu',
     'RandomCenterCropPad', 'AutoAugment', 'CutOut', 'Shear',
     'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
-    'ContrastTransform', 'Translate', 'RandomShift', 'GenerateCoef','CreatePointData',
-    'LoadArtiPointData', 'DownSamplePointData', 'LoadArtiNOCSData', 'LoadArtiJointData', 
+    'ContrastTransform', 'Translate', 'RandomShift', 'GenerateCoef', 'CreatePointData',
+    'LoadArtiPointData', 'DownSamplePointData', 'LoadArtiNOCSData', 'LoadArtiJointData',
     'CreateArtiJointGT', 'CreatePartRelationGT', 'CreatePartMask', 'DownSampleArti',
-    'DefaultFormatBundleArti', 'CreatePoseGT', 'DefaultPoseFormatBundle', 'LoadPoseData', 
+    'DefaultFormatBundleArti', 'CreatePoseGT', 'DefaultPoseFormatBundle', 'LoadPoseData',
     'PoseImgPreprocess', 'ObjectSample', 'RandomFlip3D', 'ObjectNoise', 'GlobalRotScaleTrans',
     'PointShuffle', 'ObjectRangeFilter', 'PointsRangeFilter', 'Collect3D',
     'Compose', 'LoadMultiViewImageFromFiles', 'LoadPointsFromFile',

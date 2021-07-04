@@ -1,9 +1,7 @@
 import numpy as np
 import torch
 from rflib.runner import force_fp32
-from torch import nn as nn
 from torch.nn import functional as F
-
 from rfvision.core.post_processing3d import aligned_3d_nms
 from rfvision.models.builder import build_loss, HEADS
 from rfvision.components.losses import chamfer_distance
@@ -11,10 +9,10 @@ from rfvision.components.utils import VoteModule
 from rflib.ops import build_sa_module, furthest_point_sample
 from rfvision.core import build_bbox_coder, multi_apply
 from rfvision.components.dense_heads import BaseConvBboxHead
-
+from rflib.runner import BaseModule
 
 @HEADS.register_module()
-class VoteHead(nn.Module):
+class VoteHead(BaseModule):
     r"""Bbox head of `Votenet <https://arxiv.org/abs/1904.09664>`_.
 
     Args:
@@ -55,8 +53,9 @@ class VoteHead(nn.Module):
                  size_class_loss=None,
                  size_res_loss=None,
                  semantic_loss=None,
-                 iou_loss=None):
-        super(VoteHead, self).__init__()
+                 iou_loss=None,
+                 init_cfg=None):
+        super(VoteHead, self).__init__(init_cfg)
         self.num_classes = num_classes
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
@@ -91,10 +90,6 @@ class VoteHead(nn.Module):
             num_cls_out_channels=self._get_cls_out_channels(),
             num_reg_out_channels=self._get_reg_out_channels())
 
-    def init_weights(self):
-        """Initialize weights of VoteHead."""
-        pass
-
     def _get_cls_out_channels(self):
         """Return the channel number of classification outputs."""
         # Class numbers (k) + objectness (2)
@@ -118,9 +113,19 @@ class VoteHead(nn.Module):
             torch.Tensor: Features of input points.
             torch.Tensor: Indices of input points.
         """
-        seed_points = feat_dict['seed_points']
-        seed_features = feat_dict['seed_features']
-        seed_indices = feat_dict['seed_indices']
+
+        # for imvotenet
+        if 'seed_points' in feat_dict and \
+           'seed_features' in feat_dict and \
+           'seed_indices' in feat_dict:
+            seed_points = feat_dict['seed_points']
+            seed_features = feat_dict['seed_features']
+            seed_indices = feat_dict['seed_indices']
+        # for votenet
+        else:
+            seed_points = feat_dict['fp_xyz'][-1]
+            seed_features = feat_dict['fp_features'][-1]
+            seed_indices = feat_dict['fp_indices'][-1]
 
         return seed_points, seed_features, seed_indices
 
@@ -653,3 +658,18 @@ class VoteHead(nn.Module):
             labels = bbox_classes[selected]
 
         return bbox_selected, score_selected, labels
+
+
+
+if __name__ == '__main__':
+    from rflib import Config
+    cfg = Config.fromfile('../../../flows/detectors3d/votenet/votenet_16x8_sunrgbd-3d-10class.py')
+    vote_head_cfg = cfg.model['bbox_head']
+    vote_head_cfg.pop('type')
+    m = VoteHead(**vote_head_cfg).cuda()
+
+    feat_dict = {'seed_points': torch.rand(1, 1024, 3).cuda(),
+                 'seed_features': torch.rand(1, 256, 1024).cuda(),
+                 'seed_indices': torch.rand(1, 1024).cuda()}
+
+    res = m(feat_dict, 'vote')

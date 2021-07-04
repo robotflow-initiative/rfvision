@@ -6,8 +6,6 @@ import open3d as o3d
 import numpy as np
 import os
 
-
-
 @DETECTORS.register_module()
 class SkeletonMerger(BaseDetector):
     def __init__(self,
@@ -15,10 +13,9 @@ class SkeletonMerger(BaseDetector):
                  head,
                  init_cfg=None,
                  **kwargs):
-        super().__init__()
+        super().__init__(init_cfg)
         self.backbone = build_backbone(backbone)
         self.head = build_head(head)
-        self.init_weights(init_cfg)
 
     def forward_train(self, points):
         APP_PT = torch.cat([points, points, points], -1)

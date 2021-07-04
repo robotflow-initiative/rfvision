@@ -3,7 +3,7 @@ model = dict(
     type='ANCSH',
     backbone=dict(
         type='PointNet2ForArticulation',
-        in_channel=6),
+        in_channels=3),
     nocs_head=dict(
         type='ANCSHHead',
         n_parts=3,
@@ -68,16 +68,16 @@ test_cfg = dict(
         mask_thr_binary=0.5))
 # dataset settings
 category = 'box'
-data_track = 'synthetic'
+data_track = 'real'
 if data_track == 'synthetic':
     dataset_type = 'ArtiImgDataset'
-    data_root = 'data/synthetic_data/' + category + '/'
+    data_root = '/disk1/data/arti_data/synthetic_data/' + category + '/'
 else:
-    dataset_type = 'ArtiRealDataset'
-    data_root = 'data/real_data/' + category + '/'
+    dataset_type = 'ArtiImgDataset'
+    data_root = '/disk1/data/arti_data/real_data/' + category + '/'
 
 test_dataset_type = 'ArtiImgDataset'
-test_data_root = 'data/synthetic_data/' + category + '/'
+test_data_root = '/disk1/data/arti_data/real_data/' + category + '/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
@@ -113,22 +113,30 @@ data = dict(
     workers_per_gpu=16,
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'train.txt',
+        ann_file=data_root + 'train_meta.txt',
         img_prefix=data_root,
         intrinsics_path=data_root + 'camera_intrinsic.json',
-        pipeline=train_pipeline),
+        pipeline=train_pipeline,
+        domain='real',
+        n_max_parts=3),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'test.txt',
         img_prefix=data_root,
         intrinsics_path=data_root + 'camera_intrinsic.json',
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        domain='real',
+        n_max_parts=3
+    ),
     test=dict(
         type=test_dataset_type,
         ann_file=test_data_root + 'test.txt',
         img_prefix=test_data_root,
         intrinsics_path=test_data_root + 'camera_intrinsic.json',
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        domain='real',
+        n_max_parts=3
+    ))
 # optimizer
 optimizer = dict(type='Adam', lr=0.001)
 optimizer_config = dict(grad_clip=dict(max_norm=5, norm_type=2))

@@ -1,12 +1,13 @@
 import torch
 from rflib import is_tuple_of
 from rflib.cnn import ConvModule
+from rflib.runner import BaseModule
 from torch import nn as nn
 
 from rfvision.models.builder import build_loss
 
 
-class VoteModule(nn.Module):
+class VoteModule(BaseModule):
     """Vote module.
 
     Generate votes from seed point features.
@@ -43,8 +44,10 @@ class VoteModule(nn.Module):
                  norm_feats=True,
                  with_res_feat=True,
                  vote_xyz_range=None,
-                 vote_loss=None):
-        super().__init__()
+                 vote_loss=None,
+                 bias='auto',
+                 init_cfg=None):
+        super().__init__(init_cfg)
         self.in_channels = in_channels
         self.vote_per_seed = vote_per_seed
         self.gt_per_seed = gt_per_seed
@@ -70,7 +73,7 @@ class VoteModule(nn.Module):
                     conv_cfg=conv_cfg,
                     norm_cfg=norm_cfg,
                     act_cfg=act_cfg,
-                    bias=True,
+                    bias=bias,
                     inplace=True))
             prev_channels = conv_channels[k]
         self.vote_conv = nn.Sequential(*vote_conv_list)

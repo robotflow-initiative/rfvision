@@ -29,7 +29,7 @@ test_cfg = dict(densefusion_head=dict(type=None))
 # dataset settings
 dataset_type = 'YCBVideoDataset'
 data_root = '/disk6/YCB_Video_Dataset/'
-data_config_path = '/home/liuliu/mmdetection/configs/densefusion/dataset_config_ycb/'
+data_config_path = '/home/hanyang/rfvision/datasets/ycb_video'
 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
