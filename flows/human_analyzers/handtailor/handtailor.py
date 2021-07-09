@@ -22,8 +22,11 @@ train_pipeline = [
     dict(type='JointsNormalize'),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageFormatBundle'),
-    dict(type='ToTensor', keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joints_uvd']),
-    dict(type='Collect3D', keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joints_uvd'])
+    dict(type='ToTensor',
+         keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joints_uvd'],
+         to_float=True),
+    dict(type='Collect3D',
+         keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joints_uvd'])
 ]
 
 val_pipeline = [
@@ -33,10 +36,13 @@ val_pipeline = [
     dict(type='JointsNormalize'),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageFormatBundle'),
-    dict(type='ToTensor', keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joint_bone',
-                                'joints_uvd', 'joints_uv', 'joint_root', 'joints_xyz', ]),
-    dict(type='Collect3D', keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joint_bone',
-                                 'joints_uvd', 'joints_uv', 'joint_root', 'joints_xyz', ]),
+    dict(type='ToTensor',
+         keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joint_bone',
+               'joints_uvd', 'joints_uv', 'joint_root', 'joints_xyz', ],
+         to_float=True),
+    dict(type='Collect3D',
+         keys=['img', 'heatmap', 'heatmap_weight', 'K', 'joint_bone',
+               'joints_uvd', 'joints_uv', 'joint_root', 'joints_xyz', ]),
 ]
 
 data_root = '/hdd0/data/FreiHAND_pub_v1'

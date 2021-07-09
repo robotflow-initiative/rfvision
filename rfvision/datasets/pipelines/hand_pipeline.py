@@ -186,9 +186,14 @@ class GenerateHeatmap2D:
 
 @PIPELINES.register_module()
 class JointsNormalize:
-
+    '''
+    Normalize joints_z and joints_uv, this pipeline is specially used for handtailor now.
+    Require keys : joints_xyz, joints_uv, img_shape
+    Generate keys: joint_root, joint_bone, joints_uvd
+    Update keys : joints_xyz
+    '''
     def __init__(self):
-
+        # DEPTH_MIN and DEPTH_RANGE is the empirical value
         self.DEPTH_MIN = -1.5
         self.DEPTH_RANGE = 3
 
@@ -205,8 +210,11 @@ class JointsNormalize:
         joints_z_normalized = (joints_z_normalized - self.DEPTH_MIN) / self.DEPTH_RANGE # shape (21, 1)
 
         joints_xyz[:, 2:] = joints_z_normalized
+
+        ############# normalize joint_uv ############
         joints_uv_normalized = results['joints_uv'] / np.array(results['img_shape'])
 
+        # combine uv and z to 'uvd'
         joints_uvd = np.hstack((joints_uv_normalized, joints_z_normalized))
 
         results['joints_uvd'] = joints_uvd
