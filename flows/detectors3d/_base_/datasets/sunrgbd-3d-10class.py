@@ -1,5 +1,5 @@
 dataset_type = 'SUNRGBDDataset'
-data_root = '/disk3/data/sunrgbd/'
+data_root = '/hdd0/data/sunrgbd/'
 class_names = ('bed', 'table', 'sofa', 'chair', 'toilet', 'desk', 'dresser',
                'night_stand', 'bookshelf', 'bathtub')
 train_pipeline = [

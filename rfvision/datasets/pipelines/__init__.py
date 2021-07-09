@@ -3,7 +3,8 @@ from .auto_augment import (AutoAugment, BrightnessTransform, ColorTransform,
                            Translate)
 from .compose import Compose
 from .formating import (Collect, DefaultFormatBundle, ImageToTensor,
-                        ToDataContainer, ToTensor, Transpose, to_tensor)
+                        ToDataContainer, ToTensor, Transpose, to_tensor,
+                        ImageFormatBundle)
 from .loading import (LoadAnnotations, LoadImageFromFile, LoadImageFromWebcam,
                       LoadMultiChannelImageFromFiles, LoadProposals)
 from .test_time_aug import MultiScaleFlipAug
@@ -32,6 +33,8 @@ from .transforms3d import (BackgroundPointsFilter, GlobalRotScaleTrans,
 from .imvotenet_pipeline import LoadImVote
 from .handtailor_pipeline import HandTailorPipeline
 from .keypointnet_pipeline import NormalizePoints
+from .hand_pipeline import (GetJointsUV, AffineCorp, GenerateHeatmap2D,
+                            JointsNormalize)
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
@@ -53,5 +56,6 @@ __all__ = [
     'NormalizePointsColor', 'LoadAnnotations3D', 'IndoorPointSample',
     'PointSegClassMapping', 'MultiScaleFlipAug3D', 'LoadPointsFromMultiSweeps',
     'BackgroundPointsFilter', 'VoxelBasedPointSampler', 'LoadImVote', 'LetterResize',
-    'HandTailorPipeline', 'NormalizePoints'
+    'HandTailorPipeline', 'NormalizePoints', 'AffineCorp', 'GenerateHeatmap2D',
+    'JointsNormalize', 'GetJointsUV'
 ]

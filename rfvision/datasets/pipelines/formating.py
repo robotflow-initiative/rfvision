@@ -171,6 +171,18 @@ class ToDataContainer:
 
 
 @PIPELINES.register_module()
+class ImageFormatBundle:
+    # This pipeline is used for img transpose from (w, h, 3) to (3, w, h).
+    def __call__(self, results):
+        img = results['img']
+        if len(img.shape) < 3:
+            img = np.expand_dims(img, -1)
+        results['img'] = np.ascontiguousarray(img.transpose(2, 0, 1))
+        return results
+
+
+
+@PIPELINES.register_module()
 class DefaultFormatBundle:
     """Default formatting bundle.
 

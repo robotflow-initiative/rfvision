@@ -1,11 +1,12 @@
 import numpy as np
 from collections import OrderedDict
 from os import path as osp
+
+from rfvision.core import show_result, show_multi_modality_result
 from rfvision.datasets.pipelines import Compose
-from rfvision.core import show_result
 from rfvision.core.bbox3d import DepthInstance3DBoxes
 from rfvision.core import eval_map
-from . import DATASETS
+from rfvision.datasets import DATASETS
 from .custom3d import Custom3DDataset
 
 
@@ -94,9 +95,7 @@ class SUNRGBDDataset(Custom3DDataset):
             input_dict['file_name'] = pts_filename
 
         if self.modality['use_camera']:
-            img_filename = osp.join(
-                osp.join(self.data_root, 'sunrgbd_trainval'),
-                info['image']['image_path'])
+            img_filename = osp.join(self.data_root, info['image']['image_path'])
             input_dict['img_prefix'] = None
             input_dict['img_info'] = dict(filename=img_filename)
             calib = info['calib']

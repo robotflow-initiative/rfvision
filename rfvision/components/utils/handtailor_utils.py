@@ -137,9 +137,7 @@ def get_affine_transform(center, scale, res, rot=0):
     rot_mat[1, :2] = [sn, cs]
     rot_mat[2, 2] = 1
     # Rotate center to obtain coordinate of center in rotated image
-    origin_rot_center = rot_mat.dot(center.tolist() + [
-        1,
-    ])[:2]
+    origin_rot_center = rot_mat.dot(center.tolist() + [1])[:2]
     # Get center for transform with verts rotated around optical axis
     # (through pixel center, smthg like 128, 128 in pixels and 0,0 in 3d world)
     # For this, rotate the center but around center of image (vs 0,0 in pixel space)
@@ -273,3 +271,5 @@ def get_pck_all(pred_joints_xyzs, gt_joints_xyzs, threshold):
     dist = torch.sqrt(torch.sum((gt_joints_xyzs * 1000 - pred_joints_xyzs * 1000) ** 2, -1))  # shape (21, n)
     pck = (torch.mean(dist, -2) <= threshold).float()  # shape (21, 1)
     return pck.mean()
+
+
