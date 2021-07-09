@@ -41,9 +41,10 @@ class ToTensor:
         keys (Sequence[str]): Keys that need to be converted to Tensor.
     """
 
-    def __init__(self, keys):
+    def __init__(self, keys, to_float=False):
+        # tycoer add to_float
         self.keys = keys
-
+        self.to_float = to_float
     def __call__(self, results):
         """Call function to convert data in results to :obj:`torch.Tensor`.
 
@@ -54,8 +55,12 @@ class ToTensor:
             dict: The result dict contains the data converted
                 to :obj:`torch.Tensor`.
         """
-        for key in self.keys:
-            results[key] = to_tensor(results[key])
+        if self.to_float:
+            for key in self.keys:
+                results[key] = to_tensor(results[key]).float()
+        else:
+            for key in self.keys:
+                results[key] = to_tensor(results[key])
         return results
 
     def __repr__(self):
