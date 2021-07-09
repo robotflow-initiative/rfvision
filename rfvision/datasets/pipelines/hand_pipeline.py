@@ -117,6 +117,7 @@ class AffineCorp(object):
         self.centralize = centralize
 
     def get_joints_center_uv(self, joints_uv):
+        # get the center minimum bounding rectangle as joints_uv center
         min_u, min_v = joints_uv.min(0)
         max_u, max_v = joints_uv.max(0)
         c_u = int((max_u + min_u) / 2)
@@ -136,6 +137,7 @@ class AffineCorp(object):
         else:
             center_uv = self.get_joints_center_uv(results['joints_uv'])
 
+        # affine
         affine_matrix = cv2.getRotationMatrix2D(center_uv, rot_angle, scale=1)
         img_affine = cv2.warpAffine(results['img'], affine_matrix, self.img_outsize)
         joints_uv_affine = affine_transform(results['joints_uv'], affine_matrix)
