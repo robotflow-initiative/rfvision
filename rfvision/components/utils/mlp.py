@@ -1,8 +1,9 @@
 from rflib.cnn import ConvModule
 from torch import nn as nn
+from rflib.runner import BaseModule
 
 
-class MLP(nn.Module):
+class MLP(BaseModule):
     """A simple MLP module.
 
     Pass features (B, C, N) through an MLP.
@@ -26,8 +27,9 @@ class MLP(nn.Module):
                  conv_cfg=dict(type='Conv1d'),
                  norm_cfg=dict(type='BN1d'),
                  act_cfg=dict(type='ReLU'),
-                 bias='auto'):
-        super().__init__()
+                 bias='auto',
+                 init_cfg=None):
+        super().__init__(init_cfg=init_cfg)
         self.mlp = nn.Sequential()
         prev_channels = in_channel
         for i, conv_channel in enumerate(conv_channels):

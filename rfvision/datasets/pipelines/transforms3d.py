@@ -12,11 +12,9 @@ import warnings
 @PIPELINES.register_module()
 class RandomDropPointsColor(object):
     r"""Randomly set the color of points to all zeros.
-
     Once this transform is executed, all the points' color will be dropped.
     Refer to `PAConv <https://github.com/CVMI-Lab/PAConv/blob/main/scene_seg/
     util/transform.py#L223>`_ for more details.
-
     Args:
         drop_ratio (float): The probability of dropping point colors.
             Defaults to 0.2.
@@ -29,10 +27,8 @@ class RandomDropPointsColor(object):
 
     def __call__(self, input_dict):
         """Call function to drop point colors.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after color dropping, \
                 'points' key is updated in the result dict.
@@ -56,11 +52,9 @@ class RandomDropPointsColor(object):
 @PIPELINES.register_module()
 class RandomFlip3D(RandomFlip):
     """Flip the points & bbox.
-
     If the input dict contains the key "flip", then the flag will be used,
     otherwise it will be randomly decided by a ratio specified in the init
     method.
-
     Args:
         sync_2d (bool, optional): Whether to apply flip according to the 2D
             images. If True, it will apply the same flip as that to 2D images.
@@ -92,11 +86,9 @@ class RandomFlip3D(RandomFlip):
 
     def random_flip_data_3d(self, input_dict, direction='horizontal'):
         """Flip 3D data randomly.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
             direction (str): Flip direction. Default: horizontal.
-
         Returns:
             dict: Flipped results, 'points', 'bbox3d_fields' keys are \
                 updated in the result dict.
@@ -123,10 +115,8 @@ class RandomFlip3D(RandomFlip):
     def __call__(self, input_dict):
         """Call function to flip points, values in the ``bbox3d_fields`` and \
         also flip 2D image and its annotations.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Flipped results, 'flip', 'flip_direction', \
                 'pcd_horizontal_flip' and 'pcd_vertical_flip' keys are added \
@@ -170,10 +160,8 @@ class RandomFlip3D(RandomFlip):
 @PIPELINES.register_module()
 class RandomJitterPoints(object):
     """Randomly jitter point coordinates.
-
     Different from the global translation in ``GlobalRotScaleTrans``, here we \
         apply different noises to each point in a scene.
-
     Args:
         jitter_std (list[float]): The standard deviation of jittering noise.
             This applies random noise to all points in a 3D scene, which is \
@@ -182,7 +170,6 @@ class RandomJitterPoints(object):
         clip_range (list[float] | None): Clip the randomly generated jitter \
             noise into this range. If None is given, don't perform clipping.
             Defaults to [-0.05, 0.05]
-
     Note:
         This transform should only be used in point cloud segmentation tasks \
             because we don't transform ground-truth bboxes accordingly.
@@ -208,10 +195,8 @@ class RandomJitterPoints(object):
 
     def __call__(self, input_dict):
         """Call function to jitter all the points in the scene.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after adding noise to each point, \
                 'points' key is updated in the result dict.
@@ -238,7 +223,6 @@ class RandomJitterPoints(object):
 @PIPELINES.register_module()
 class ObjectSample(object):
     """Sample GT objects to the data.
-
     Args:
         db_sampler (dict): Config dict of the database sampler.
         sample_2d (bool): Whether to also paste 2D image patch to the images
@@ -256,11 +240,9 @@ class ObjectSample(object):
     @staticmethod
     def remove_points_in_boxes(points, boxes):
         """Remove the points in the sampled bounding boxes.
-
         Args:
             points (:obj:`BasePoints`): Input point cloud array.
             boxes (np.ndarray): Sampled ground truth boxes.
-
         Returns:
             np.ndarray: Points with those in the boxes removed.
         """
@@ -270,10 +252,8 @@ class ObjectSample(object):
 
     def __call__(self, input_dict):
         """Call function to sample ground truth objects to the data.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after object sampling augmentation, \
                 'points', 'gt_bboxes_3d', 'gt_labels_3d' keys are updated \
@@ -342,7 +322,6 @@ class ObjectSample(object):
 @PIPELINES.register_module()
 class ObjectNoise(object):
     """Apply noise to each GT objects in the scene.
-
     Args:
         translation_std (list[float], optional): Standard deviation of the
             distribution where translation noise are sampled from.
@@ -367,10 +346,8 @@ class ObjectNoise(object):
 
     def __call__(self, input_dict):
         """Call function to apply noise to each ground truth in the scene.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after adding noise to each object, \
                 'points', 'gt_bboxes_3d' keys are updated in the result dict.
@@ -407,10 +384,8 @@ class ObjectNoise(object):
 @PIPELINES.register_module()
 class GlobalAlignment(object):
     """Apply global alignment to 3D scene points by rotation and translation.
-
     Args:
         rotation_axis (int): Rotation axis for points and bboxes rotation.
-
     Note:
         We do not record the applied rotation and translation as in \
             GlobalRotScaleTrans. Because usually, we do not need to reverse \
@@ -424,11 +399,9 @@ class GlobalAlignment(object):
 
     def _trans_points(self, input_dict, trans_factor):
         """Private function to translate points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
             trans_factor (np.ndarray): Translation vector to be applied.
-
         Returns:
             dict: Results after translation, 'points' is updated in the dict.
         """
@@ -436,11 +409,9 @@ class GlobalAlignment(object):
 
     def _rot_points(self, input_dict, rot_mat):
         """Private function to rotate bounding boxes and points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
             rot_mat (np.ndarray): Rotation matrix to be applied.
-
         Returns:
             dict: Results after rotation, 'points' is updated in the dict.
         """
@@ -449,7 +420,6 @@ class GlobalAlignment(object):
 
     def _check_rot_mat(self, rot_mat):
         """Check if rotation matrix is valid for self.rotation_axis.
-
         Args:
             rot_mat (np.ndarray): Rotation matrix to be applied.
         """
@@ -462,10 +432,8 @@ class GlobalAlignment(object):
 
     def __call__(self, input_dict):
         """Call function to shuffle points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after global alignment, 'points' and keys in \
                 input_dict['bbox3d_fields'] are updated in the result dict.
@@ -494,7 +462,6 @@ class GlobalAlignment(object):
 @PIPELINES.register_module()
 class GlobalRotScaleTrans(object):
     """Apply global rotation, scaling and translation to a 3D scene.
-
     Args:
         rot_range (list[float]): Range of rotation angle.
             Defaults to [-0.78539816, 0.78539816] (close to [-pi/4, pi/4]).
@@ -538,10 +505,8 @@ class GlobalRotScaleTrans(object):
 
     def _trans_bbox_points(self, input_dict):
         """Private function to translate bounding boxes and points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after translation, 'points', 'pcd_trans' \
                 and keys in input_dict['bbox3d_fields'] are updated \
@@ -557,10 +522,8 @@ class GlobalRotScaleTrans(object):
 
     def _rot_bbox_points(self, input_dict):
         """Private function to rotate bounding boxes and points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after rotation, 'points', 'pcd_rotation' \
                 and keys in input_dict['bbox3d_fields'] are updated \
@@ -585,10 +548,8 @@ class GlobalRotScaleTrans(object):
 
     def _scale_bbox_points(self, input_dict):
         """Private function to scale bounding boxes and points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after scaling, 'points'and keys in \
                 input_dict['bbox3d_fields'] are updated in the result dict.
@@ -607,10 +568,8 @@ class GlobalRotScaleTrans(object):
 
     def _random_scale(self, input_dict):
         """Private function to randomly set the scale factor.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after scaling, 'pcd_scale_factor' are updated \
                 in the result dict.
@@ -622,10 +581,8 @@ class GlobalRotScaleTrans(object):
     def __call__(self, input_dict):
         """Private function to rotate, scale and translate bounding boxes and \
         points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after scaling, 'points', 'pcd_rotation',
                 'pcd_scale_factor', 'pcd_trans' and keys in \
@@ -661,10 +618,8 @@ class PointShuffle(object):
 
     def __call__(self, input_dict):
         """Call function to shuffle points.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after filtering, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -690,7 +645,6 @@ class PointShuffle(object):
 @PIPELINES.register_module()
 class ObjectRangeFilter(object):
     """Filter objects by the range.
-
     Args:
         point_cloud_range (list[float]): Point cloud range.
     """
@@ -701,10 +655,8 @@ class ObjectRangeFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter objects by the range.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after filtering, 'gt_bboxes_3d', 'gt_labels_3d' \
                 keys are updated in the result dict.
@@ -736,7 +688,6 @@ class ObjectRangeFilter(object):
 @PIPELINES.register_module()
 class PointsRangeFilter(object):
     """Filter points by the range.
-
     Args:
         point_cloud_range (list[float]): Point cloud range.
     """
@@ -746,10 +697,8 @@ class PointsRangeFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter points by the range.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after filtering, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -781,7 +730,6 @@ class PointsRangeFilter(object):
 @PIPELINES.register_module()
 class ObjectNameFilter(object):
     """Filter GT objects by their names.
-
     Args:
         classes (list[str]): List of class names to be kept for training.
     """
@@ -792,10 +740,8 @@ class ObjectNameFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter objects by their names.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after filtering, 'gt_bboxes_3d', 'gt_labels_3d' \
                 keys are updated in the result dict.
@@ -818,9 +764,7 @@ class ObjectNameFilter(object):
 @PIPELINES.register_module()
 class IndoorPointSample(object):
     """Indoor point sample.
-
     Sampling data to a certain number.
-
     Args:
         name (str): Name of the dataset.
         num_points (int): Number of points to be sampled.
@@ -835,19 +779,15 @@ class IndoorPointSample(object):
                                replace=None,
                                return_choices=False):
         """Points random sampling.
-
         Sample points to a certain number.
-
         Args:
             points (np.ndarray | :obj:`BasePoints`): 3D Points.
             num_samples (int): Number of samples to be sampled.
             replace (bool): Whether the sample is with or without replacement.
             Defaults to None.
             return_choices (bool): Whether return choice. Defaults to False.
-
         Returns:
             tuple[np.ndarray] | np.ndarray:
-
                 - points (np.ndarray | :obj:`BasePoints`): 3D Points.
                 - choices (np.ndarray, optional): The generated random samples.
         """
@@ -862,10 +802,8 @@ class IndoorPointSample(object):
 
     def __call__(self, results):
         """Call function to sample points to in indoor scenes.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after sampling, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -899,9 +837,7 @@ class IndoorPointSample(object):
 class IndoorPatchPointSample(object):
     r"""Indoor point sample within a patch. Modified from `PointNet++ <https://
     github.com/charlesq34/pointnet2/blob/master/scannet/scannet_dataset.py>`_.
-
     Sampling data to a certain number for semantic segmentation.
-
     Args:
         num_points (int): Number of points to be sampled.
         block_size (float, optional): Size of a block to sample points from.
@@ -923,7 +859,6 @@ class IndoorPatchPointSample(object):
         min_unique_num (int | None, optional): Minimum number of unique points
             the sampled patch should contain. If None, use PointNet++'s method
             to judge uniqueness. Defaults to None.
-
     Note:
         This transform should only be used in the training process of point
             cloud segmentation tasks. For the sliding patch generation and
@@ -956,10 +891,8 @@ class IndoorPatchPointSample(object):
     def _input_generation(self, coords, patch_center, coord_max, attributes,
                           attribute_dims, point_type):
         """Generating model input.
-
         Generate input by subtracting patch center and adding additional \
             features. Currently support colors and normalized xyz as features.
-
         Args:
             coords (np.ndarray): Sampled 3D Points.
             patch_center (np.ndarray): Center coordinate of the selected patch.
@@ -968,7 +901,6 @@ class IndoorPatchPointSample(object):
             attribute_dims (dict): Dictionary to indicate the meaning of extra
                 dimension.
             point_type (type): class of input points inherited from BasePoints.
-
         Returns:
             :obj:`BasePoints`: The generated input data.
         """
@@ -996,19 +928,15 @@ class IndoorPatchPointSample(object):
 
     def _patch_points_sampling(self, points, sem_mask, replace=None):
         """Patch points sampling.
-
         First sample a valid patch.
         Then sample points within that patch to a certain number.
-
         Args:
             points (:obj:`BasePoints`): 3D Points.
             sem_mask (np.ndarray): semantic segmentation mask for input points.
             replace (bool): Whether the sample is with or without replacement.
                 Defaults to None.
-
         Returns:
             tuple[:obj:`BasePoints`, np.ndarray] | :obj:`BasePoints`:
-
                 - points (:obj:`BasePoints`): 3D Points.
                 - choices (np.ndarray): The generated random samples.
         """
@@ -1088,10 +1016,8 @@ class IndoorPatchPointSample(object):
 
     def __call__(self, results):
         """Call function to sample points to in indoor scenes.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after sampling, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -1129,7 +1055,6 @@ class IndoorPatchPointSample(object):
 @PIPELINES.register_module()
 class BackgroundPointsFilter(object):
     """Filter background points near the bounding box.
-
     Args:
         bbox_enlarge_range (tuple[float], float): Bbox enlarge range.
     """
@@ -1147,10 +1072,8 @@ class BackgroundPointsFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter points by the range.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after filtering, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -1194,9 +1117,7 @@ class BackgroundPointsFilter(object):
 @PIPELINES.register_module()
 class VoxelBasedPointSampler(object):
     """Voxel based point sampler.
-
     Apply voxel sampling to multiple sweep points.
-
     Args:
         cur_sweep_cfg (dict): Config for sampling current points.
         prev_sweep_cfg (dict): Config for sampling previous points.
@@ -1219,13 +1140,11 @@ class VoxelBasedPointSampler(object):
 
     def _sample_points(self, points, sampler, point_dim):
         """Sample points for each points subset.
-
         Args:
             points (np.ndarray): Points subset to be sampled.
             sampler (VoxelGenerator): Voxel based sampler for
                 each points subset.
             point_dim (int): The dimention of each points
-
         Returns:
             np.ndarray: Sampled points.
         """
@@ -1245,10 +1164,8 @@ class VoxelBasedPointSampler(object):
 
     def __call__(self, results):
         """Call function to sample points from multiple sweeps.
-
         Args:
             input_dict (dict): Result dict from loading pipeline.
-
         Returns:
             dict: Results after sampling, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.

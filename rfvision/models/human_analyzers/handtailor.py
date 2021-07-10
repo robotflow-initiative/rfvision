@@ -50,14 +50,14 @@ class HandTailor(BaseDetector):
         # release
         img = kwargs['img']
         heatmap = kwargs['heatmap']
-        heatmap_weight = kwargs['heatmap_weight']
+        # heatmap_weight = kwargs['heatmap_weight']
 
         heatmap_list, feature_list = self.backbone2d(img)
         out_headmap_2d = heatmap_list[-1]
         out_feature_2d = feature_list[-1]
 
         pred_dict_2d = {'out_features_2d': out_feature_2d}
-        loss2d = self.loss.loss2d(out_headmap_2d, heatmap, heatmap_weight)
+        loss2d = self.loss.loss2d(out_headmap_2d, heatmap, None)
         losses = {'loss2d': loss2d}
         return losses, pred_dict_2d
 
@@ -134,20 +134,6 @@ class HandTailor(BaseDetector):
         pred_dict_handtailor = self.forward_test_mano(**kwargs)
         return pred_dict_handtailor
 
-    def train_step(self, data, optimizer, current_epoch=-1):
-        # This train step only can be used for handtailor with 'HandTailorRunner'
-        # A new parameter 'current_epoch' is added. Therefore the different training stages
-        # can be controlled by epoch.
-        losses = self(**data, current_epoch=current_epoch)
-        loss, log_vars = self._parse_losses(losses)
-
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
-
-        return outputs
-
-    def val_step(self, data, optimizer, current_epoch=-1):
-        return self.train_step(data, optimizer, current_epoch)
 
     def forward(self, return_loss=True, current_epoch=-1, **kwargs):
         if return_loss == True:
@@ -165,6 +151,21 @@ class HandTailor(BaseDetector):
         else:
             pred_dict = self.forward_test(**kwargs)
             return pred_dict,
+
+    def train_step(self, data, optimizer, current_epoch=-1):
+        # This train step only can be used for handtailor with 'HandTailorRunner'
+        # A new parameter 'current_epoch' is added. Therefore the different training stages
+        # can be controlled by epoch.
+        losses = self(**data, current_epoch=current_epoch)
+        loss, log_vars = self._parse_losses(losses)
+
+        outputs = dict(
+            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
+
+        return outputs
+
+    def val_step(self, data, optimizer, current_epoch=-1):
+        return self.train_step(data, optimizer, current_epoch)
 
     def simple_test(self, img, img_metas, **kwargs):
         pass

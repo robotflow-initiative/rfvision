@@ -41,9 +41,10 @@ class ToTensor:
         keys (Sequence[str]): Keys that need to be converted to Tensor.
     """
 
-    def __init__(self, keys):
+    def __init__(self, keys, to_float=False):
+        # tycoer add to_float
         self.keys = keys
-
+        self.to_float = to_float
     def __call__(self, results):
         """Call function to convert data in results to :obj:`torch.Tensor`.
 
@@ -54,8 +55,12 @@ class ToTensor:
             dict: The result dict contains the data converted
                 to :obj:`torch.Tensor`.
         """
-        for key in self.keys:
-            results[key] = to_tensor(results[key])
+        if self.to_float:
+            for key in self.keys:
+                results[key] = to_tensor(results[key]).float()
+        else:
+            for key in self.keys:
+                results[key] = to_tensor(results[key])
         return results
 
     def __repr__(self):
@@ -168,6 +173,18 @@ class ToDataContainer:
 
     def __repr__(self):
         return self.__class__.__name__ + f'(fields={self.fields})'
+
+
+@PIPELINES.register_module()
+class ImageFormatBundle:
+    # This pipeline is used for img transpose from (w, h, 3) to (3, w, h).
+    def __call__(self, results):
+        img = results['img']
+        if len(img.shape) < 3:
+            img = np.expand_dims(img, -1)
+        results['img'] = np.ascontiguousarray(img.transpose(2, 0, 1))
+        return results
+
 
 
 @PIPELINES.register_module()
