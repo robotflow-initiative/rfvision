@@ -5,6 +5,28 @@ from rfvision.models.builder import LOSSES
 from .utils import weighted_loss
 
 
+@LOSSES.register_module()
+class HeatmapMSELoss(nn.Module):
+    def __init__(self, loss_weight=1.):
+        super().__init__()
+        self.loss_weight = loss_weight
+
+    def forward(self, hm_pred, hm_gt, hm_weight=None):
+        b, c = hm_pred.shape[:2]
+        hm_pred = hm_pred.reshape(b, c, -1).split(1, 1)
+        hm_gt = hm_gt.reshape(b, c, -1).split(1, 1)
+
+        loss = 0.
+        if hm_weight is not None:
+            hm_pred, hm_gt = hm_pred * hm_weight, hm_gt * hm_weight
+            for i in range(c):
+                loss += F.mse_loss(hm_pred[i], hm_gt[i])
+        else:
+            for i in range(c):
+                loss += F.mse_loss(hm_pred[i], hm_gt[i])
+        return loss / c * self.loss_weight
+
+
 @weighted_loss
 def mse_loss(pred, target):
     """Warpper of mse loss."""
