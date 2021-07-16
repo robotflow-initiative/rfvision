@@ -1,21 +1,35 @@
 from rfvision.models.builder import DETECTORS, build_backbone, build_loss, build_detector
 from rfvision.models import BaseDetector
-from rfvision.components.utils.handtailor_utils import hm_to_uvd
-from rflib.cnn import kaiming_init, constant_init
-from rflib.runner import load_checkpoint
-import logging
+from rfvision.components.utils import heatmap_to_uv, batch_uv2xyz
 import torch
+
+# DEPTH_MIN = 3
+# DEPTH_RANGE = -1.5
+
+
+def heatmap_to_uvd(hm3d):
+    b, c, h, w = hm3d.size()
+    hm2d = hm3d[:, :21, ...]
+    depth = hm3d[:, 21:, ...]
+    uv = heatmap_to_uv(hm2d, mode='average') / torch.FloatTensor([[w, h]])
+    hm2d = hm2d.view(b, 1, c // 2, -1)
+    depth = depth.view(b, 1, c // 2, -1)
+    hm2d = hm2d / torch.sum(hm2d, -1, keepdim=True)
+    d = torch.sum(depth * hm2d, -1).permute(0, 2, 1)
+    joints_uvd = torch.cat((uv, d), dim=-1)
+    return joints_uvd
+
 
 @DETECTORS.register_module()
 class HandTailor(BaseDetector):
     '''
     The handtailor has a multi-stage training process:
     stage 0 (A independent stage) : train iknet independently.
-    stage 1 - forward_train_2d : train (backbone2d + head2d)
-    stage 2 - forward_train_3d : train (backbone2d + head2d trained in forward_train_2d) + (backbone3d + head3d)
+    stage 1 - forward_train_2d : train (backbone_2d)
+    stage 2 - forward_train_3d : train (backbone_2d trained in forward_train_2d) + (backbone_3d)
 
-    stage 3 - forward_train_mano : train (backbone2d + head2d trained in forward_train_3d) +
-                                         (backbone3d + head3d trained in forward_train_3d) +
+    stage 3 - forward_train_mano : train (backbone_2d trained in forward_train_3d) +
+                                         (backbone_3d trained in forward_train_3d) +
                                          iknet (trained in stage0) + manonet
     Therefore, the function 'forward' is the combination of stage 0 ~ stage 3.
     '''
@@ -25,115 +39,143 @@ class HandTailor(BaseDetector):
     def __init__(self,
                  manonet,
                  iknet,
-                 loss,
-                 backbone2d,
-                 backbone3d,
+                 backbone_2d,
+                 backbone_3d,
+                 loss_2d,
+                 loss_3d,
+                 loss_so3,
+                 loss_joints_xyz,
+                 loss_beta,
+                 normalize_z=True,
                  epoch_2d=100,
                  epoch_3d=100,
                  epoch_mano=100,
-                 save_model_seperately = True,
-                 **kwargs,
-                 ):
-        super().__init__()
-        self.loss = build_loss(loss)
-        self.backbone2d = build_backbone(backbone2d)
-        self.backbone3d = build_backbone(backbone3d)
+                 init_cfg=None,
+                 **kwargs):
+
+        super().__init__(init_cfg)
+        self.backbone_2d = build_backbone(backbone_2d)
+        self.backbone_3d = build_backbone(backbone_3d)
         self.manonet = build_backbone(manonet)
         self.iknet = build_detector(iknet)
 
+        self.loss_2d = build_loss(loss_2d)
+        self.loss_3d = build_loss(loss_3d)
+        self.loss_so3 = build_loss(loss_so3)
+        self.loss_joints_xyz = build_loss(loss_joints_xyz)
+        self.loss_beta = build_loss(loss_beta)
+
+        self.normalize_z = normalize_z
         self.epoch_2d = epoch_2d
         self.epoch_3d = epoch_3d
         self.epoch_mano = epoch_mano
-        self.save_model_seperately = save_model_seperately
 
-    def forward_train_2d(self, **kwargs):
+
+    def forward_train_2d(self, return_loss=True, **kwargs ):
         # release
         img = kwargs['img']
         heatmap = kwargs['heatmap']
         # heatmap_weight = kwargs['heatmap_weight']
 
-        heatmap_list, feature_list = self.backbone2d(img)
+        heatmap_list, feature_list = self.backbone_2d(img)
         out_headmap_2d = heatmap_list[-1]
         out_feature_2d = feature_list[-1]
 
         pred_dict_2d = {'out_features_2d': out_feature_2d}
-        loss2d = self.loss.loss2d(out_headmap_2d, heatmap, None)
-        losses = {'loss2d': loss2d}
-        return losses, pred_dict_2d
+        if return_loss == True:
+            loss2d = self.loss_2d(out_headmap_2d, heatmap, None)
+            losses = {'loss2d': loss2d}
+            return losses, pred_dict_2d
+        else:
+            return pred_dict_2d
 
-    def forward_train_3d(self, **kwargs):
-        gt_joints_uvd = kwargs['joints_uvd']
-
+    def forward_train_3d(self, return_loss=True, **kwargs):
         losses, pred_dict_2d = self.forward_train_2d(**kwargs)
+        heatmap_list, feature_list = self.backbone_3d(pred_dict_2d['out_features_2d'])
 
-        heatmap_list, feature_list = self.backbone3d(pred_dict_2d['out_features_2d'])
         out_heatmap_3d = heatmap_list[-1]
         out_feature_3d = feature_list[-1]
 
-        pred_joints_uvd = hm_to_uvd(out_heatmap_3d)
         pred_dict_3d = {'out_features_3d': out_feature_3d,
                         'out_heatmap_3d': out_heatmap_3d[:, :21, ...],
-                        'pred_joints_uvd': pred_joints_uvd,
                         }
 
-        loss3d = self.loss.loss3d(pred_joints_uvd, gt_joints_uvd)
-        losses['loss3d'] = loss3d
-        return losses, pred_dict_3d
+        if return_loss == True:
+            pred_joints_uvd = heatmap_to_uvd(out_heatmap_3d)
+            joints_xyz, joints_uv = kwargs['joints_xyz'], kwargs['joints_uv']
+            if self.normalize_z == True:
+                root_joint = joints_xyz[9]
+                joint_bone = torch.norm(root_joint - joints_xyz[0])
+                joints_z_normalized = (joints_xyz[:, :, 2:] - root_joint[2]) / joint_bone
+                # joints_z_normalized = (joints_z_normalized - DEPTH_MIN) / DEPTH_RANGE  # shape (21, 1)
+                gt_joints_uvd = torch.cat((joints_uv, joints_z_normalized), dim=-1)
+            else:
+                gt_joints_uvd = torch.cat((joints_uv, joints_xyz[:, :, 2:]), dim=-1)
+            loss3d = self.loss_3d(pred_joints_uvd, gt_joints_uvd)
+            losses['loss3d'] = loss3d
+            return losses, pred_dict_3d
+        else:
+            return pred_dict_3d
 
-    def forward_train_mano(self, **kwargs):
+
+    def forward_train_mano(self, return_loss=True, **kwargs):
         K = kwargs['K']
+        img_shape = kwargs['img_shape']
+        # gt_joints_xyz = kwargs['joints_xyz']
         # train
         losses, pred_dict_3d = self.forward_train_3d(**kwargs)
-        pred_dict_mano = self.manonet(pred_dict_3d, K)
-        pred_so3, pred_quat = self.iknet.forward_test(pred_dict_mano['joints_xyz_mano'])
+        joints_uvd = heatmap_to_uvd(pred_dict_3d['out_heatmap_3d'])
+        joints_uv = joints_uvd[:, :, :2] * img_shape  # denormalize uv
 
-        # compute loss
-        loss_so3 = self.loss.loss_so3(pred_so3, torch.zeros_like(pred_so3))
-        loss_quat = self.loss.loss_quat(pred_quat, torch.zeros_like(pred_quat))
+        beta, root_joint_z, joint_bone = self.manonet(pred_dict_3d['out_features_3d'])
 
-        # combine loss
-        losses['loss_so3'] = loss_so3
-        losses['loss_quat'] = loss_quat
-        return losses
+        if self.normalize_z == True:
+            # denormalize
+            joints_z_denormalized = joints_uvd[:, :, 2:] * joint_bone + root_joint_z
+            # joints_z_denormalized = joints_z_normalized * DEPTH_RANGE + DEPTH_MIN
+            joints_xyz = batch_uv2xyz(uv=joints_uv,
+                                      K=K,
+                                      depth=joints_z_denormalized)
+            # normalize
+            root_joint = joints_xyz[9]
+            joint_bone = torch.norm(root_joint - joints_xyz[0])
+            joints_z_normalized = (joints_xyz[:, :, 2:] - root_joint[2]) / joint_bone
+            joints_xyz[:, :, 2] = joints_z_normalized
+            so3, quat = self.iknet.forward_test(joints_xyz)
 
-    def forward_test_2d(self, **kwargs):
-        heatmap_list, feature_list = self.backbone2d(kwargs['img'])
-        out_feature_2d = feature_list[-1]
-        pred_dict_2d = {'out_features_2d': out_feature_2d}
-        return pred_dict_2d
+        else:
+            joints_xyz = batch_uv2xyz(uv=joints_uv,
+                                      K=K,
+                                      depth=joints_uvd[:, :, 2:])
+            root_joint = joints_xyz[9]
+            joint_bone = torch.norm(root_joint - joints_xyz[0])
 
-    def forward_test_3d(self, **kwargs):
-        pred_dict_2d = self.forward_test_2d(**kwargs)
-        heatmap_list, feature_list = self.backbone3d(pred_dict_2d['out_features_2d'])
-        out_heatmap_3d = heatmap_list[-1]
-        out_feature_3d = feature_list[-1]
 
-        pred_joints_uvd = hm_to_uvd(out_heatmap_3d)
-        pred_dict_3d = {'out_features_3d': out_feature_3d,
-                        'out_heatmap_3d': out_heatmap_3d[:, :21, ...],
-                        'pred_joints_uvd': pred_joints_uvd,
-                        }
-        return pred_dict_3d
+        pred_mano_dict ={
+            'heatmap': pred_dict_3d['out_heatmap_3d'],
+            'root_joint': root_joint,
+            'joint_bone': joint_bone,
+            'beta': beta,
+            'quat': quat,
+            'theta': so3,
+        }
+
+        if return_loss == True:
+            # compute loss
+            loss_so3 = self.loss_so3(so3, torch.zeros_like(so3))
+            # loss_joints_xyz = self.loss_joints_xyz(quat, torch.zeros_like(quat))
+            loss_beta = self.loss_beta(beta, torch.zeros_like(beta))
+            # combine loss
+            losses['loss_so3'] = loss_so3
+            # losses['loss_joints_xyz'] = loss_joints_xyz
+            losses['loss_beta'] = loss_beta
+            return losses
+        else:
+            return pred_mano_dict
 
     def forward_test_mano(self, **kwargs):
-        pred_dict_3d = self.forward_test_3d(**kwargs)
-        pred_dict_mano = self.manonet(pred_dict_3d, kwargs['K'])
-        pred_dict_ik = self.iknet.forward_test(pred_dict_mano['joints_xyz_mano'])
-
-        pred_dict_handtailor = {
-            'heatmap': pred_dict_3d['out_heatmap_3d'],
-            'joints_uvd': pred_dict_3d['pred_joints_uvd'],
-            'joints_xyz': pred_dict_mano['joints_xyz_mano'],
-            'beta': pred_dict_mano['beta'],
-            'quat': pred_dict_ik['quat'],
-            'so3': pred_dict_ik['so3'],
-        }
-        return pred_dict_handtailor
-
-    def forward_test(self, **kwargs):
-        pred_dict_handtailor = self.forward_test_mano(**kwargs)
-        return pred_dict_handtailor
-
+        pred_dict_mano = self.forward_train_mano(kwargs, return_loss=False)
+        return pred_dict_mano
 
     def forward(self, return_loss=True, current_epoch=-1, **kwargs):
         if return_loss == True:
@@ -149,8 +191,9 @@ class HandTailor(BaseDetector):
                 losses = self.forward_train_mano(**kwargs)
                 return losses
         else:
-            pred_dict = self.forward_test(**kwargs)
-            return pred_dict,
+            pred_dict_mano = self.forward_test_mano(kwargs)
+            return pred_dict_mano
+
 
     def train_step(self, data, optimizer, current_epoch=-1):
         # This train step only can be used for handtailor with 'HandTailorRunner'

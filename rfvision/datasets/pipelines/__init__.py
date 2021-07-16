@@ -34,7 +34,7 @@ from .imvotenet_pipeline import LoadImVote
 from .handtailor_pipeline import HandTailorPipeline
 from .keypointnet_pipeline import NormalizePoints
 from .hand_pipeline import (GetJointsUV, AffineCorp, GenerateHeatmap2D,
-                            JointsNormalize)
+                            JointsUVNormalize)
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
@@ -57,5 +57,5 @@ __all__ = [
     'PointSegClassMapping', 'MultiScaleFlipAug3D', 'LoadPointsFromMultiSweeps',
     'BackgroundPointsFilter', 'VoxelBasedPointSampler', 'LoadImVote', 'LetterResize',
     'HandTailorPipeline', 'NormalizePoints', 'AffineCorp', 'GenerateHeatmap2D',
-    'JointsNormalize', 'GetJointsUV'
+    'JointsUVNormalize', 'GetJointsUV'
 ]

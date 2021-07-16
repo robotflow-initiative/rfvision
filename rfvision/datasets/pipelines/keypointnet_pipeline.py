@@ -1,24 +1,13 @@
 from rfvision.datasets import PIPELINES
-
+from rfvision.components.utils import normalize_point_cloud
 @PIPELINES.register_module()
 class NormalizePoints:
-
     def __call__(self, results):
         points = results['points']
-        pc_min = points.min()
-        pc_max = points.max()
-        points_normalized = (points - pc_min) / (pc_max - pc_min)
-        results['points'] = points_normalized
+        pc_normalized, centroid, m = normalize_point_cloud(points)
 
         if 'keypoints_xyz' in results:
             keypoints_xyz = results['keypoints_xyz']
-            keypoints_xyz_normalized = (keypoints_xyz - pc_min) / (pc_max - pc_min)
+            keypoints_xyz_normalized = (keypoints_xyz - centroid) / m
             results['keypoints_xyz'] = keypoints_xyz_normalized
-
-        if 'vertices' in results:
-            vertices = results['vertices']
-            vertices_min = vertices.min()
-            vertices_max = vertices.max()
-            vertices_normalized = (vertices - vertices_min) / (vertices_max - vertices_min)
-            results['vertices'] = vertices_normalized
         return results

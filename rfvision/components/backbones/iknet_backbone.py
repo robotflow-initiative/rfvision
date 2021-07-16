@@ -5,8 +5,8 @@ import logging
 from torch.nn.modules.batchnorm import _BatchNorm
 from rflib.cnn import kaiming_init, constant_init
 from rflib.runner import load_checkpoint
-from rfvision.components.utils.handtailor_utils import (normalize_quaternion, quaternion_to_angle_axis,
-                                                               quaternion_mul, quaternion_inv)
+from rfvision.components.utils import (normalize_quaternion, quaternion_to_angle_axis,
+                                       quaternion_mul, quaternion_inv)
 from rfvision.models.builder import BACKBONES
 
 

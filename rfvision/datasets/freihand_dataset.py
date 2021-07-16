@@ -2,10 +2,8 @@ import os
 import rflib
 import numpy as np
 from torch.utils.data import Dataset
-import torch
-from . import DATASETS
-from .pipelines import Compose
-from rfvision.components.utils.handtailor_utils import (hm_to_kp2d, uvd2xyz, get_pck_all)
+from rfvision.datasets import DATASETS
+from rfvision.datasets.pipelines import Compose
 
 @DATASETS.register_module()
 class FreiHandDataset(Dataset):
@@ -45,9 +43,10 @@ class FreiHandDataset(Dataset):
 
     def __getitem__(self, idx):
         idx = self.split_id[idx]  # map index
-        rgb = rflib.imread(os.path.join(self.training_root, 'rgb', '%08d' % idx + '.jpg'))
         results = {
-            'img': rgb,
+            'img_prefix': None,
+            'img_info': {'filename': os.path.join(self.training_root, 'rgb', '%08d' % idx + '.jpg')},
+            'idx': idx,
             'scale': np.float32(self.training_scale[idx]),
             'mano': np.float32(self.training_mano[idx]),
             'joints_xyz': np.float32(self.training_xyz[idx]),
@@ -65,53 +64,7 @@ class FreiHandDataset(Dataset):
                  metric='mAP',
                  logger=None,
                  **kwargs):
-        gt_joints_xyzs, pred_joints_xyzs, pred_joints_xyzs_mano = (), (), ()
-
-        for idx in range(len(self)):
-            gt_result = self.__getitem__(idx)
-            gt_result = {key: value.cpu() if key!='img_metas' in gt_result else value for key, value in gt_result.items()}
-            pred_result = results[idx]
-            pred_result = {key: value.cpu() if  key != 'img_metas' in gt_result else value for key, value in
-                        pred_result.items()}
-            gt_joints_uv = gt_result['joints_uv']
-            pred_joints_uv = hm_to_kp2d(pred_result['heatmap']).squeeze(0)
-            err_uv = float(torch.mean(torch.sqrt(torch.sum((gt_joints_uv - pred_joints_uv) ** 2, -1)), -1))
-
-            gt_joints_uvd = gt_result['joints_uvd']
-            pred_joints_uvd = pred_result['joints_uvd'].squeeze(0)
-            err_uvd = float(torch.mean(torch.sqrt(torch.sum((gt_joints_uvd - pred_joints_uvd) ** 2, -1)), -1))
-
-            # to tuple
-            joint_root = gt_result['joint_root'].unsqueeze(0)
-            joint_bone = gt_result['joint_bone']
-            pred_joints_uvd = pred_result['joints_uvd']
-            K = gt_result['K'].unsqueeze(0)
-            gt_joints_xyzs += gt_result['joints_xyz'],
-            pred_joints_xyzs += uvd2xyz(pred_joints_uvd, joint_root, joint_bone, K),
-            pred_joints_xyzs_mano += (pred_result['joints_xyz'] * gt_result['joint_bone'] + gt_result['joint_root']),
-
-        gt_joints_xyzs = torch.stack(gt_joints_xyzs)
-        pred_joints_xyzs = torch.stack(pred_joints_xyzs).squeeze()
-        pred_joints_xyzs_mano = torch.stack(pred_joints_xyzs_mano).squeeze()
-
-        err_xyz_20 = get_pck_all(pred_joints_xyzs, gt_joints_xyzs, threshold=20)
-        err_xyz_30 = get_pck_all(pred_joints_xyzs, gt_joints_xyzs, threshold=30)
-        err_xyz_40 = get_pck_all(pred_joints_xyzs, gt_joints_xyzs, threshold=40)
-
-        err_xyz_mano_20 = get_pck_all(pred_joints_xyzs_mano, gt_joints_xyzs, threshold=20)
-        err_xyz_mano_30 = get_pck_all(pred_joints_xyzs_mano, gt_joints_xyzs, threshold=30)
-        err_xyz_mano_40 = get_pck_all(pred_joints_xyzs_mano, gt_joints_xyzs, threshold=40)
-
-        eval_dict = {'err_xyz_20': float(err_xyz_20),
-                     'err_xyz_30': float(err_xyz_30),
-                     'err_xyz_40': float(err_xyz_40),
-                     'err_xyz_mano_20': float(err_xyz_mano_20),
-                     'err_xyz_mano_30': float(err_xyz_mano_30),
-                     'err_xyz_mano_40': float(err_xyz_mano_40),
-                     'err_uv': float(err_uv),
-                     'err_uvd': float(err_uvd)}
-
-        return eval_dict
+        pass
 
 
 
