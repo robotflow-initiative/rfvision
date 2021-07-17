@@ -135,7 +135,7 @@ if __name__ == '__main__':
         author='RobotFlow',
         author_email='vinjohn@sjtu.edu.cn',
         keywords='robot vision',
-        url='https://github.com/WenqiangX/rfvision',
+        url='https://github.com/mvig-robotflow/rfvision',
         packages=find_packages(exclude=('configs', 'tools', 'demo')),
         include_package_data=True,
         classifiers=[
