@@ -9,12 +9,10 @@ import torch
 from rflib import Config, DictAction
 from rflib.cnn import fuse_conv_bn
 from rflib.parallel import RFDataParallel, RFDistributedDataParallel
-from rflib.runner import (get_dist_info, init_dist, load_checkpoint,
-                         wrap_fp16_model)
+from rflib.runner import get_dist_info, init_dist, load_checkpoint, wrap_fp16_model
 
 from rfvision.apis import multi_gpu_test, single_gpu_test
-from rfvision.datasets import (build_dataloader, build_dataset,
-                            replace_ImageToTensor)
+from rfvision.datasets import build_dataloader, build_dataset, replace_ImageToTensor
 from rfvision.models import build_detector
 
 
@@ -22,7 +20,8 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='RFVision test (and eval) a model')
     parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file')
+    # tycoer
+    parser.add_argument('checkpoint', help='checkpoint file', default='none')
     parser.add_argument(
         '--work-dir',
         help='the directory to save the file containing evaluation metrics')
@@ -187,7 +186,13 @@ def main():
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+
+    # tycoer
+    if args.checkpoint != 'none':
+        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+    else:
+        checkpoint = {'state_dict': model.state_dict()}
+
     if args.fuse_conv_bn:
         model = fuse_conv_bn(model)
     # old versions did not save class info in checkpoints, this walkaround is

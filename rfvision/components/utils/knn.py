@@ -1,20 +1,5 @@
 import torch
 
-
-def KNN(train_x, test_x,  k):
-
-    m = test_x.size(0)
-    n = train_x.size(0)
-
-    # cal Eud distance mat
-    print("cal dist matrix")
-    xx = (test_x**2).sum(dim=1,keepdim=True).expand(m, n)
-    yy = (train_x**2).sum(dim=1, keepdim=True).expand(n, m).transpose(0,1)
-
-    dist_mat = xx + yy - 2*test_x.matmul(train_x.transpose(0,1))
-    mink_idxs = dist_mat.argsort(dim=-1)
-    return mink_idxs[:, :k], dist_mat
-
 def euclidean_dist(x, y):
     """
     Args:

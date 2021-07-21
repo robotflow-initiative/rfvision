@@ -13,7 +13,7 @@ model = dict(
         type='IKNet', backbone=dict(type='IKNetBackbone'), init_cfg=None),
     backbone_2d=dict(type='HandTailor2DBackbone'),
     backbone_3d=dict(type='HandTailor3DBackbone'),
-    loss_2d=dict(type='HeatmapMSELoss', loss_weight=1000),
+    loss_2d=dict(type='HeatmapMSELoss'),
     loss_3d=dict(type='MSELoss'),
     loss_so3=dict(type='MSELoss'),
     loss_joints_xyz=dict(type='MSELoss'),
@@ -23,8 +23,7 @@ model = dict(
     epoch_mano=epoch_mano)
 
 img_norm_cfg = dict(mean=[0, 0, 0], std=[255., 255., 255.], to_rgb=True)
-keys = ['img', 'heatmap', 'heatmap_weight', 'K', 'joints_xyz', 'joints_uv']
-
+keys = ['img', 'heatmap', 'heatmap_weight', 'K', 'joints_xyz', 'joints_uv', 'joints_uv_visible']
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='GetJointsUV'),
@@ -53,7 +52,7 @@ val_pipeline = [
 data_root = '/hdd0/data/FreiHAND_pub_v1'
 data = dict(
     samples_per_gpu=64,
-    workers_per_gpu=8,
+    workers_per_gpu=0,
     train=dict(
         type='FreiHandDataset',
         pipeline=train_pipeline,
@@ -63,7 +62,7 @@ data = dict(
         type='FreiHandDataset',
         pipeline=val_pipeline,
         data_root='/hdd0/data/FreiHAND_pub_v1',
-        split='test'),
+        split='val'),
     test=dict(
         type='FreiHandDataset',
         pipeline=val_pipeline,
@@ -73,8 +72,7 @@ data = dict(
 optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
 lr_config = dict(policy='step', warmup=None, step=[25, 40, 75, 90, 125, 140])
-total_epochs = 150
-
+evaluation = dict(interval=1, metric=['PCK', 'AUC', 'EPE'], res_folder='/home/hanyang/')
 runner = dict(type='EpochControlledRunner', max_epochs=total_epoch)
 find_unused_parameters = True
 gpu_ids = range(0, 1)

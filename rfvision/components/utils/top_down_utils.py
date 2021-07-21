@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import cv2
 import torch.nn.functional as F
+import scipy.spatial.transform.rotation as rot
 
 def batch_argmax(tensor):
     '''
@@ -46,15 +47,15 @@ def heatmap_to_uv(hm, mode='max'):
         hm = hm.reshape(b, c, -1)
         hm = hm / torch.sum(hm, dim=-1, keepdim=True)
         v_map, u_map = torch.meshgrid(torch.arange(h), torch.arange(w))
-        u_map = u_map.reshape(1, 1, -1).float()
-        v_map = v_map.reshape(1, 1, -1).float()
+        u_map = u_map.reshape(1, 1, -1).float().to(hm.device)
+        v_map = v_map.reshape(1, 1, -1).float().to(hm.device)
         u = torch.sum(u_map * hm, -1, keepdim=True)
         v = torch.sum(v_map * hm, -1, keepdim=True)
         uv = torch.cat((u, v), dim=-1)
     return uv
 
 
-def generate_heatmap_2d(uv, heatmap_shape ,sigma=7):
+def generate_heatmap_2d(uv, heatmap_shape, sigma=7):
     '''
 
     Args:
@@ -188,7 +189,7 @@ def normalize_point_cloud(pc):
     return pc_normalized, centroid, m
 
 
-def depth_map_to_point_cloud(depth_map,  K, depth_scale=1, flatten=True):
+def depth_map_to_point_cloud(depth_map, K, depth_scale=1, flatten=True):
     '''
     Convert depth_map to point_cloud
 
@@ -209,7 +210,7 @@ def depth_map_to_point_cloud(depth_map,  K, depth_scale=1, flatten=True):
     z = depth_map / depth_scale
     x = (w_map - cx) * z / fx
     y = (h_map - cy) * z / fy
-    pc = np.dstack((x, y, z)) if flatten == False else np.dstack((x, y, z)).reshape(-1,3)
+    pc = np.dstack((x, y, z)) if flatten == False else np.dstack((x, y, z)).reshape(-1, 3)
 
     # cv2.rgbd.depthTo3d(depth_map.astype('float32'), K.astype('float32'))
     return pc

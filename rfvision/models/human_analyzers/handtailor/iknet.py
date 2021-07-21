@@ -1,8 +1,8 @@
-from rfvision.models.builder import DETECTORS, build_backbone, build_head, build_loss, build_detector
+from rfvision.models.builder import build_backbone, HUMAN_ANALYZERS
 from rfvision.models import BaseDetector
 
 
-@DETECTORS.register_module()
+@HUMAN_ANALYZERS.register_module()
 class IKNet(BaseDetector):
     def __init__(self,
                  backbone,
@@ -24,10 +24,8 @@ class IKNet(BaseDetector):
 
     def forward_test(self, joints_xyz):
         gt_joints_xyz = joints_xyz
-        pred_so3, pred_quat = self.backbone(gt_joints_xyz)
-        pred_dict = {'so3': pred_so3,
-                     'quat': pred_quat}
-        return pred_dict
+        so3, quat = self.backbone(gt_joints_xyz)
+        return so3, quat
 
     def forward(self, return_loss=True, **kwargs):
         joints_xyz = kwargs['joints_xyz_ik']
@@ -36,8 +34,8 @@ class IKNet(BaseDetector):
             losses = self.forward_train(joints_xyz, quat)
             return losses
         else:
-            pred_dict = self.forward_test(joints_xyz)
-            return pred_dict,
+            so3, quat  = self.forward_test(joints_xyz)
+            return so3, quat
 
     def train_step(self, data, optimizer):
         losses = self(**data)

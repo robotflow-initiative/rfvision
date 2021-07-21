@@ -7,8 +7,32 @@ from rfvision.datasets import PIPELINES
 @PIPELINES.register_module()
 class GetJointsUV:
     # Compute joints uv toward joints xyz and K.
+    def get_joints_bbox(self, joints_uv):
+        # get bbox info of joints_uv
+        min_u, min_v = joints_uv.min(0)
+        max_u, max_v = joints_uv.max(0)
+        joints_bbox_uv = np.array([min_u, min_v, max_u, max_v])  # bbox left-top uv , right_bottom uv
+        # get the center minimum bounding rectangle as joints_uv center
+        c_u = int((max_u + min_u) / 2)
+        c_v = int((max_v + min_v) / 2)
+        joints_center_uv = (c_u, c_v)
+        return joints_bbox_uv, joints_center_uv
+
     def __call__(self, results):
-        results['joints_uv'] = xyz2uv(results['joints_xyz'], results['K'])
+        img_shape = np.array(results['img_shape'][:2]).reshape(-1, 2)
+        joints_uv = xyz2uv(results['joints_xyz'], results['K'])
+        # joints_uv_visible: joints_uv inside image boundary is visible (set to 1) and joints_uv out of image
+        # boundary is invisible (set to 0)
+        # Typically, joint_uv = (126, 262), image boundary wh = (224, 224), thus this joint is invisible. (Due to v (262) > h (224) )
+        bool_matrix = joints_uv < img_shape
+        joints_uv_visible = np.logical_and(bool_matrix[:, 0], bool_matrix[:, 1]).astype('int32')
+
+        joints_bbox_uv, joints_center_uv = self.get_joints_bbox(joints_uv)
+
+        results['joints_uv'] = joints_uv
+        results['joints_uv_visible'] = joints_uv_visible
+        results['joints_bbox_uv'] = joints_bbox_uv
+        results['joints_center_uv'] = joints_center_uv
         return results
 
 
@@ -37,16 +61,6 @@ class AffineCorp(object):
         self.img_outsize = img_outsize
         self.centralize = centralize
 
-    def get_joints_center_uv(self, joints_uv):
-        # get the center minimum bounding rectangle as joints_uv center
-        min_u, min_v = joints_uv.min(0)
-        max_u, max_v = joints_uv.max(0)
-        c_u = int((max_u + min_u) / 2)
-        c_v = int((max_v + min_v) / 2)
-        joints_center_uv = (c_u, c_v)
-        return joints_center_uv
-
-
     def __call__(self, results):
         if self.rot_angle_range is None:
             rot_angle = 0
@@ -54,7 +68,7 @@ class AffineCorp(object):
             rot_angle = np.random.randint(low=self.rot_angle_range[0],
                                           high=self.rot_angle_range[1])
         if self.centralize == True:
-            joints_center_uv = self.get_joints_center_uv(results['joints_uv'])
+            joints_center_uv = results['joints_center_uv']
             # rotate first
             affine_matrix = cv2.getRotationMatrix2D(joints_center_uv, rot_angle, scale=1)
             img_center_uv = np.array(results['img_shape'][:2][::-1]) // 2
@@ -99,12 +113,15 @@ class GenerateHeatmap2D:
                  heatmap_shape=(64, 64),
                  sigma=1):
 
-        self.heatmap_shape = heatmap_shape
+        self.heatmap_shape = np.array(heatmap_shape)
         self.sigma = sigma
 
     def __call__(self, results):
-        joints_uv_for_hm = results['joints_uv'] / results['img_shape'] * np.array(self.heatmap_shape)
-        hm = np.array([generate_heatmap_2d(uv, self.heatmap_shape, self.sigma) for uv in np.int32(joints_uv_for_hm)])
+        joints_uv_for_hm = results['joints_uv'] / results['img_shape'][:2] * self.heatmap_shape
+
+        hm = np.array([generate_heatmap_2d(uv, self.heatmap_shape, self.sigma) \
+                       if visible == 1 else np.zeros(self.heatmap_shape) \
+                       for uv, visible in zip(np.int32(joints_uv_for_hm), results['joints_uv_visible'])])
         hm_weight = np.ones((results['joints_uv'].shape[0], 1))
         # for num_joints = 21
         # hm shape (21, 64, 64)
@@ -116,7 +133,7 @@ class GenerateHeatmap2D:
 @PIPELINES.register_module()
 class JointsUVNormalize:
     def __call__(self, results):
-        joints_uv = results['joints_uv'] / results['img_shape'][::-1]
+        joints_uv = results['joints_uv'] / results['img_shape'][:2][::-1] #  [::-1] img_shape (h, w) to img_shape (w, h)
         results['joints_uv'] = joints_uv
         return results
 

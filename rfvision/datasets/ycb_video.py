@@ -34,7 +34,6 @@ class YCBVideoDataset(Dataset):
                  pipeline,
                  img_prefix,
                  noise_trans=0.03,
-                 refine=False,
                  add_noise=True,
                  num_pt=1000,
                  test_mode=False,

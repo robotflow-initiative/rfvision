@@ -1,8 +1,8 @@
-from rfvision.models.builder import build_neck,build_head,DETECTORS
+from rfvision.models.builder import build_neck,build_head, POSE_ESTIMATORS
 import torch
 from ..detectors import BaseDetector
 
-@DETECTORS.register_module()
+@POSE_ESTIMATORS.register_module()
 class DenseFusionRefiner(BaseDetector):
     def __init__(self,
                  neck,

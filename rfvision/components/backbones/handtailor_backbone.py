@@ -1,7 +1,7 @@
 from rfvision.components.backbones.resnet import Bottleneck, ResNet
 from rflib.cnn import ConvModule
+from rflib.runner import BaseModule
 from rfvision.models.builder import BACKBONES
-from rfvision.components.utils import batch_uv2xyz, heatmap_to_uv
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
@@ -64,11 +64,12 @@ class _HourglassModule(nn.Module):
 
 
 @BACKBONES.register_module()
-class HandTailor2DBackbone(nn.Module):
+class HandTailor2DBackbone(BaseModule):
     def __init__(self,
                  num_joints=21,
-                 num_stack=2):
-        super().__init__()
+                 num_stack=2,
+                 init_cfg=None):
+        super().__init__(init_cfg)
         self.num_stack = num_stack
         self.num_joints = num_joints
 
@@ -125,12 +126,12 @@ class HandTailor2DBackbone(nn.Module):
 
 
 @BACKBONES.register_module()
-class HandTailor3DBackbone(nn.Module):
+class HandTailor3DBackbone(BaseModule):
     def __init__(self,
                  num_joints=21,
                  num_stack=2,
-                 normalize_joints_z=True):
-        super().__init__()
+                 init_cfg=None):
+        super().__init__(init_cfg)
         self.num_stack = num_stack
         self.num_joints = num_joints
         self.fuse_layers()
@@ -167,13 +168,14 @@ class HandTailor3DBackbone(nn.Module):
 
 
 @BACKBONES.register_module()
-class ManoNetBackbone(nn.Module):
+class ManoNetBackbone(BaseModule):
     def __init__(self,
                  in_channels=512,
                  hidden_channels=(512, 512, 1024, 1024, 512, 256),
                  out_channels=12,
+                 init_cfg=None
                  ):
-        super().__init__()
+        super().__init__(init_cfg)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
