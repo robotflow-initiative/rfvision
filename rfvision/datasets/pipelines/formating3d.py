@@ -260,3 +260,25 @@ class DefaultFormatBundle3D(DefaultFormatBundle):
         repr_str += 'with_gt={}, with_label={})'.format(
             self.with_gt, self.with_label)
         return repr_str
+
+
+@PIPELINES.register_module()
+class RenameKeys:
+    """Rename the keys.
+
+    Args:
+    key_pairs (Sequence[tuple]): Required keys to be renamed. If a tuple
+    (key_src, key_tgt) is given as an element, the item retrived by key_src
+    will be renamed as key_tgt.
+    """
+
+    def __init__(self, key_pairs):
+        self.key_pairs = key_pairs
+
+    def __call__(self, results):
+        """Rename keys."""
+        for key_pair in self.key_pairs:
+            assert len(key_pair) == 2
+            key_src, key_tgt = key_pair
+            results[key_tgt] = results.pop(key_src)
+        return results

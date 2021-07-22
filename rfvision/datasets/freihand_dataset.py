@@ -47,8 +47,8 @@ class FreiHandDataset(Dataset):
             self.length = int(len(self.training_xyz) * (1 - split_ratio[0]))
             self.split_id = split_id[self.length:]
         elif split == 'val':
-            self.split_id = int(len(self.training_xyz) * (1 - split_ratio[0] - split_ratio[1]))
-
+            self.length = int(len(self.training_xyz) * (1 - split_ratio[0] - split_ratio[1]))
+            self.split_id = split_id[self.length:]
         self.pipeline = Compose(pipeline)
         self._set_group_flag()
 
