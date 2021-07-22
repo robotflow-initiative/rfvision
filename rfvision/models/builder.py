@@ -13,6 +13,8 @@ HEADS = MODELS
 LOSSES = MODELS
 DETECTORS = MODELS
 FUSION_LAYERS = MODELS
+POSE_ESTIMATORS = MODELS
+HUMAN_ANALYZERS = MODELS
 
 
 def build_backbone(cfg):
@@ -59,4 +61,32 @@ def build_detector(cfg, train_cfg=None, test_cfg=None):
     assert cfg.get('test_cfg') is None or test_cfg is None, \
         'test_cfg specified in both outer field and model field '
     return DETECTORS.build(
+        cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
+
+
+def build_human_analyzers(cfg, train_cfg=None, test_cfg=None):
+    """Build human_analyzers."""
+    if train_cfg is not None or test_cfg is not None:
+        warnings.warn(
+            'train_cfg and test_cfg is deprecated, '
+            'please specify them in model', UserWarning)
+    assert cfg.get('train_cfg') is None or train_cfg is None, \
+        'train_cfg specified in both outer field and model field '
+    assert cfg.get('test_cfg') is None or test_cfg is None, \
+        'test_cfg specified in both outer field and model field '
+    return HUMAN_ANALYZERS.build(
+        cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
+
+
+def build_pose_estimators(cfg, train_cfg=None, test_cfg=None):
+    """Build pose_estimators."""
+    if train_cfg is not None or test_cfg is not None:
+        warnings.warn(
+            'train_cfg and test_cfg is deprecated, '
+            'please specify them in model', UserWarning)
+    assert cfg.get('train_cfg') is None or train_cfg is None, \
+        'train_cfg specified in both outer field and model field '
+    assert cfg.get('test_cfg') is None or test_cfg is None, \
+        'test_cfg specified in both outer field and model field '
+    return POSE_ESTIMATORS.build(
         cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))

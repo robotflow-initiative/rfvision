@@ -2,8 +2,8 @@ import os
 import numpy as np
 import torch
 import rflib
-from . import DATASETS
-from .custom3d import Custom3DDataset
+from rfvision.datasets import DATASETS
+from rfvision.datasets.custom3d import Custom3DDataset
 from rfvision.components import IKNetBackbone
 
 SNAP_PARENT = [

@@ -1,3 +1,5 @@
+_base_ = ['../../detectors/_base_/default_runtime.py']
+
 # model settings
 model = dict(
     type='DenseFusion',
@@ -29,7 +31,7 @@ test_cfg = dict(densefusion_head=dict(type=None))
 # dataset settings
 dataset_type = 'YCBVideoDataset'
 data_root = '/disk6/YCB_Video_Dataset/'
-data_config_path = '/home/hanyang/rfvision/datasets/ycb_video'
+data_config_path = '/home/hanyang/rfvision/rfvision/datasets/ycb_video/'
 
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
@@ -89,9 +91,3 @@ log_config = dict(
 evaluation = dict(interval=100)
 # runtime settings
 total_epochs = 500
-dist_params = dict(backend='nccl')
-log_level = 'INFO'
-work_dir = './work_dirs/densefusion_ycb_1x'
-load_from = None
-resume_from = None
-workflow = [('train', 1)]

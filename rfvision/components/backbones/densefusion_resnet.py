@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-
+from rflib.runner import BaseModule
 from rfvision.models.builder import BACKBONES
-from .resnet import ResNet
+from rfvision.components.backbones import ResNet
 
 
 class PSPModule(nn.Module):
@@ -38,14 +38,16 @@ class PSPUpsample(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+
+
+
 class PSPNet(nn.Module):
-    def __init__(self, n_classes=21, sizes=(1, 2, 3, 6), psp_size=2048, deep_features_size=1024, depth=18,
-                  init_cfg=False):
+    def __init__(self, n_classes=21, sizes=(1, 2, 3, 6), psp_size=2048, deep_features_size=1024, depth=18,):
         super(PSPNet, self).__init__()
         self.feats = ResNet(depth,                            
-                            out_indices=(2,3),
-                            strides=(1,2,1,1), 
-                            dilations = (1,1,2,4))
+                            out_indices=(2, 3),
+                            strides=(1, 2, 1, 1),
+                            dilations=(1, 1, 2, 4))
         self.psp = PSPModule(psp_size, 1024, sizes)
         self.drop_1 = nn.Dropout2d(p=0.3)
 
@@ -91,13 +93,17 @@ psp_models = {
 
 
 @BACKBONES.register_module()
-class DenseFusionResNet(nn.Module):
+class DenseFusionResNet(BaseModule):
+    def __init__(self,
+                 mode='resnet18',
+                 init_cfg=None):
+        super().__init__(init_cfg)
 
-    def __init__(self, usegpu=True):
-        super(DenseFusionResNet, self).__init__()
-
-        self.model = psp_models['resnet18'.lower()]()
+        self.model = psp_models[mode.lower()]()
 
     def forward(self, x):
         x = self.model(x)
         return x
+
+if __name__ == '__main__':
+    m = DenseFusionResNet()

@@ -6,7 +6,7 @@ lr_config = dict(
     policy='step',
     warmup=None,
     step=[50, 75])
-total_epochs = 1
+total_epochs = 100
 checkpoint_config = dict(interval=50)
 runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 # model settings

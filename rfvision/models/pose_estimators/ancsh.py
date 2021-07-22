@@ -1,7 +1,9 @@
-from rfvision.models.builder import build_backbone, build_head, DETECTORS
+from rfvision.models.builder import build_backbone, build_head, POSE_ESTIMATORS
 import torch
 from ..detectors import BaseDetector
-@DETECTORS.register_module()
+
+
+@POSE_ESTIMATORS.register_module()
 class ANCSH(BaseDetector):
     '''
     This module is a recurrence of 'Category-Level Articulated Object Pose Estimation'
@@ -14,7 +16,7 @@ class ANCSH(BaseDetector):
                  test_cfg,
                  nocs_head=None,
                  init_cfg=None):
-        super(ANCSH, self).__init__()
+        super(ANCSH, self).__init__(init_cfg)
 
         self.backbone = build_backbone(backbone)
 

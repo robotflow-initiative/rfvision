@@ -12,3 +12,5 @@ from .visualizer3d import *
 from .points import *
 from .voxel import *
 from .post_processing3d import *
+
+from .evaluation_keypoints import *

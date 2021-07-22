@@ -3,7 +3,6 @@ import torch
 from rfvision.models.builder import LOSSES
 from rfvision.components.utils.knn import knn_search
 
-
 def loss_refinement(pred_r, pred_t, target, model_points, idx, points, num_point_mesh, sym_list):
     pred_r = pred_r.view(1, 1, -1)
     pred_t = pred_t.view(1, 1, -1)
@@ -50,7 +49,7 @@ def loss_refinement(pred_r, pred_t, target, model_points, idx, points, num_point
         target = target[0].transpose(1, 0).contiguous().view(3, 1)
         pred = pred.permute(2, 0, 1).contiguous().view(3, 1)
         inds = knn_search(pred.T, target.T, k=1)
-        target = torch.index_select(target, 1, inds.view(-1) - 1)
+        target = torch.index_select(target, 1, inds.view(-1))
         target = target.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
         pred = pred.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
 
@@ -68,7 +67,6 @@ def loss_refinement(pred_r, pred_t, target, model_points, idx, points, num_point
     new_target = torch.bmm((new_target - ori_t), ori_base).contiguous()
 
     return dis / bs, new_points.detach(), new_target.detach()
-
 
 def loss_estimation(pred_r, pred_t, pred_c, target, model_points, idx, points, w, refine, num_point_mesh, sym_list):
     bs, num_p, _ = pred_c.size()
@@ -115,8 +113,8 @@ def loss_estimation(pred_r, pred_t, pred_c, target, model_points, idx, points, w
         if idx[0].item() in sym_list:
             target = target[0].transpose(1, 0).contiguous().view(3, -1)
             pred = pred.permute(2, 0, 1).contiguous().view(3, -1)
-            inds = knn_search(pred.T, target.T, k=1)
-            target = torch.index_select(target, 1, inds.view(-1).detach() - 1)
+            inds = knn_search(target.T, pred.T, k=1)
+            target = torch.index_select(target, 1, inds.view(-1).detach())
             target = target.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
             pred = pred.view(3, bs * num_p, num_point_mesh).permute(1, 2, 0).contiguous()
 
@@ -126,7 +124,6 @@ def loss_estimation(pred_r, pred_t, pred_c, target, model_points, idx, points, w
     pred_c = pred_c.view(bs, num_p)
     how_max, which_max = torch.max(pred_c, 1)
     dis = dis.view(bs, num_p)
-
     t = ori_t[which_max[0]] + points[which_max[0]]
     points = points.view(1, bs * num_p, 3)
 

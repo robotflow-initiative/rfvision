@@ -31,7 +31,6 @@ from .transforms3d import (BackgroundPointsFilter, GlobalRotScaleTrans,
                            RandomFlip3D, VoxelBasedPointSampler)
 
 from .imvotenet_pipeline import LoadImVote
-from .handtailor_pipeline import HandTailorPipeline
 from .keypointnet_pipeline import NormalizePoints
 from .hand_pipeline import (GetJointsUV, AffineCorp, GenerateHeatmap2D,
                             JointsUVNormalize)
@@ -56,6 +55,6 @@ __all__ = [
     'NormalizePointsColor', 'LoadAnnotations3D', 'IndoorPointSample',
     'PointSegClassMapping', 'MultiScaleFlipAug3D', 'LoadPointsFromMultiSweeps',
     'BackgroundPointsFilter', 'VoxelBasedPointSampler', 'LoadImVote', 'LetterResize',
-    'HandTailorPipeline', 'NormalizePoints', 'AffineCorp', 'GenerateHeatmap2D',
+    'NormalizePoints', 'AffineCorp', 'GenerateHeatmap2D',
     'JointsUVNormalize', 'GetJointsUV'
 ]
