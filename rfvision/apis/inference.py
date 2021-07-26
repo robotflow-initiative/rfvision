@@ -9,10 +9,10 @@ from rflib.runner import load_checkpoint
 from rfvision.core import get_classes
 from rfvision.datasets import replace_ImageToTensor
 from rfvision.datasets.pipelines import Compose
-from rfvision.models import build_detector
+from rfvision.models import build_model
 
 
-def init_detector(config, checkpoint=None, device='cuda:0', cfg_options=None):
+def init_model(config, checkpoint=None, device='cuda:0', cfg_options=None):
     """Initialize a detector from config file.
 
     Args:
@@ -35,7 +35,7 @@ def init_detector(config, checkpoint=None, device='cuda:0', cfg_options=None):
         config.merge_from_dict(cfg_options)
     config.model.init_cfg = None
     config.model.train_cfg = None
-    model = build_detector(config.model, test_cfg=config.get('test_cfg'))
+    model = build_model(config.model, test_cfg=config.get('test_cfg'))
     if checkpoint is not None:
         map_loc = 'cpu' if device == 'cpu' else None
         checkpoint = load_checkpoint(model, checkpoint, map_location=map_loc)
@@ -85,7 +85,7 @@ class LoadImage:
         return results
 
 
-def inference_detector(model, imgs):
+def inference_model(model, imgs):
     """Inference image(s) with the detector.
 
     Args:
@@ -146,7 +146,7 @@ def inference_detector(model, imgs):
         return results
 
 
-async def async_inference_detector(model, imgs):
+async def async_inference_model(model, imgs):
     """Async inference image(s) with the detector.
 
     Args:

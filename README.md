@@ -35,7 +35,9 @@ This project is released under the [Apache 2.0 license](./LICENSE).
    + [x] CPF (inference only, for training material, you may contact to get rfvision_restricted project)
    + [ ] Artiboost (rfvision_restricted project)
 5. Multi-modality
-   + [ ] 3D vision and touch for shape reconstruction
+   + [x] 3D vision and touch for shape reconstruction
+   + [ ] Slip detection
+   + [ ] Touch detection
 
 ## Installation
 Please refer to [get_started.md](docs/get_started.md) for installation

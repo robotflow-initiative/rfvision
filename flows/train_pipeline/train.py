@@ -12,9 +12,9 @@ from rflib.runner import get_dist_info, init_dist
 from rflib.utils import get_git_hash
 
 from rfvision import __version__
-from rfvision.apis import set_random_seed, train_detector
+from rfvision.apis import set_random_seed, train_model
 from rfvision.datasets import build_dataset
-from rfvision.models import build_detector
+from rfvision.models import build_model
 from rfvision.utils import collect_env, get_root_logger
 
 
@@ -155,7 +155,8 @@ def main():
     meta['seed'] = args.seed
     meta['exp_name'] = osp.basename(args.config)
 
-    model = build_detector(
+    model = build_model(
+        cfg.tag,
         cfg.model,
         train_cfg=cfg.get('train_cfg'),
         test_cfg=cfg.get('test_cfg'))
@@ -174,7 +175,7 @@ def main():
             CLASSES=datasets[0].CLASSES)
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
-    train_detector(
+    train_model(
         model,
         datasets,
         cfg,
