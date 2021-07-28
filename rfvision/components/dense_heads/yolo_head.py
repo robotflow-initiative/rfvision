@@ -83,7 +83,7 @@ class YOLOV3Head(BaseDenseHead, BBoxTestMixin):
         super(YOLOV3Head, self).__init__(init_cfg)
         # Check params
         assert (len(in_channels) == len(out_channels) == len(featmap_strides))
-
+        self.cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         self.num_classes = num_classes
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -101,9 +101,6 @@ class YOLOV3Head(BaseDenseHead, BBoxTestMixin):
 
         self.one_hot_smoother = one_hot_smoother
 
-        self.conv_cfg = conv_cfg
-        self.norm_cfg = norm_cfg
-        self.act_cfg = act_cfg
 
         self.bbox_coder = build_bbox_coder(bbox_coder)
         self.anchor_generator = build_anchor_generator(anchor_generator)
@@ -139,9 +136,7 @@ class YOLOV3Head(BaseDenseHead, BBoxTestMixin):
                 self.out_channels[i],
                 3,
                 padding=1,
-                conv_cfg=self.conv_cfg,
-                norm_cfg=self.norm_cfg,
-                act_cfg=self.act_cfg)
+                **self.cfg)
             conv_pred = nn.Conv2d(self.out_channels[i],
                                   self.num_anchors * self.num_attrib, 1)
 
@@ -302,7 +297,7 @@ class YOLOV3Head(BaseDenseHead, BBoxTestMixin):
                 _, topk_inds = conf_pred.topk(nms_pre)
                 batch_inds = torch.arange(batch_size).view(
                     -1, 1).expand_as(topk_inds).long()
-                
+
                 bbox_pred = bbox_pred[batch_inds, topk_inds, :]
                 cls_pred = cls_pred[batch_inds, topk_inds, :]
                 conf_pred = conf_pred[batch_inds, topk_inds]

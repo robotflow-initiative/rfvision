@@ -15,7 +15,7 @@ model = dict(
             base_sizes=[[(81, 82), (135, 169), (344, 319)],
                         [(23, 27), (37, 58), (81, 82)]],
             strides=[32, 16]),
-        bbox_coder=dict(type='YOLOBBoxCoder'),
+        bbox_coder=dict(type='YOLOBBoxCoder', scale_x_y=1.05),
         featmap_strides=[32, 16],
         loss_cls=dict(
             type='CrossEntropyLoss',
@@ -47,7 +47,7 @@ test_cfg = dict(
     max_per_img=100)
 # dataset settings
 dataset_type = 'CocoDataset'
-data_root = 'data/coco/'
+data_root = '/hdd0/data/coco/'
 img_norm_cfg = dict(mean=[0, 0, 0], std=[255., 255., 255.], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),

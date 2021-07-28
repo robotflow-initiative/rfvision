@@ -208,9 +208,6 @@ class YOLOV3Neck(BaseModule):
 
 @NECKS.register_module()
 class YOLOV4Neck(nn.Module):
-    '''
-    '''
-    
     def __init__(self,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),

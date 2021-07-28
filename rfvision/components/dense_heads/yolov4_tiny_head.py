@@ -14,26 +14,25 @@ from torch.nn.modules.batchnorm import _BatchNorm
 @HEADS.register_module()
 class YOLOV4TinyHead(YOLOV3Head):
     def _init_layers(self):
-        cfg = dict(conv_cfg=self.conv_cfg, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg)
         head = [
             OrderedDict([
                 ('10_max', nn.MaxPool2d(2, 2)),
-                ('11_conv', ConvModule(self.in_channels[0], self.in_channels[0], 3, 1, 1, **cfg)),
-                ('12_conv', ConvModule(self.in_channels[0], self.out_channels[0], 1, 1 , **cfg)),
+                ('11_conv', ConvModule(self.in_channels[0], self.in_channels[0], 3, 1, 1, **self.cfg)),
+                ('12_conv', ConvModule(self.in_channels[0], self.out_channels[0], 1, 1 , **self.cfg)),
             ]),
 
             OrderedDict([
-                ('13_conv', ConvModule(self.in_channels[1], self.in_channels[0], 3, 1, 1, **cfg)),
+                ('13_conv', ConvModule(self.in_channels[1], self.in_channels[0], 3, 1, 1, **self.cfg)),
                 ('14_conv', nn.Conv2d(self.in_channels[0], self.num_anchors * self.num_attrib, 1)),
             ]),
 
             OrderedDict([
-                ('15_convbatch', ConvModule(self.in_channels[1], self.out_channels[1], 1, 1, **cfg)),
+                ('15_convbatch', ConvModule(self.in_channels[1], self.out_channels[1], 1, 1, **self.cfg)),
                 ('16_upsample', nn.Upsample(scale_factor=2)),
             ]),
 
             OrderedDict([
-                ('17_convbatch', ConvModule(self.out_channels[0]+self.out_channels[1], 256, 3, 1, 1, **cfg)),
+                ('17_convbatch', ConvModule(self.out_channels[0]+self.out_channels[1], 256, 3, 1, 1, **self.cfg)),
                 ('18_conv', nn.Conv2d(256, self.num_anchors * self.num_attrib, 1)),
             ]),
         ]

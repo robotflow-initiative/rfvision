@@ -8,7 +8,6 @@ from rfvision.datasets.pipelines import LoadAnnotations, LoadImageFromFile
 from rfvision.components.roi_heads.mask_heads import FusedSemanticHead
 from rfvision.components.dense_heads import RPNHead
 
-
 def replace_ImageToTensor(pipelines):
     """Replace the ImageToTensor transform in a data pipeline to
     DefaultFormatBundle, which is normally useful in batch inference.
