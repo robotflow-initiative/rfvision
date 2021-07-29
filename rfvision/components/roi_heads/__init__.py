@@ -13,7 +13,7 @@ from .roi_extractors import (BaseRoIExtractor, GenericRoIExtractor,
                              SingleRoIExtractor)
 from .shared_heads import ResLayer
 from .standard_roi_head import StandardRoIHead
-
+from .dct_roi_head import DCTRoIHead
 __all__ = [
     'BaseRoIHead', 'CascadeRoIHead', 'DoubleHeadRoIHead',
     'HybridTaskCascadeRoIHead', 'ResLayer', 'BBoxHead',
@@ -21,5 +21,5 @@ __all__ = [
     'StandardRoIHead', 'Shared4Conv1FCBBoxHead', 'DoubleConvFCBBoxHead',
     'FCNMaskHead', 'HTCMaskHead', 'FusedSemanticHead',
     'BaseRoIExtractor', 'GenericRoIExtractor',
-    'SingleRoIExtractor', 'DynamicRoIHead'
+    'SingleRoIExtractor', 'DynamicRoIHead', 'DCTRoIHead'
 ]

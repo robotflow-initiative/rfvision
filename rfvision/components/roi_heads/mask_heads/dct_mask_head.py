@@ -1,6 +1,6 @@
 from rfvision.models.builder import HEADS, build_loss
 from rfvision.components.utils.dct_utils import dct_2d, idct_2d
-from rfvision.core import mask_target
+from rfvision.components.roi_heads.mask_heads import FCNMaskHead
 from rflib.cnn import ConvModule
 from rflib.cnn import kaiming_init, constant_init
 from rflib.runner import load_checkpoint
@@ -84,7 +84,7 @@ class DctMaskEncoding(object):
 
 
 @HEADS.register_module()
-class MaskRCNNDCTHead(nn.Module):
+class MaskRCNNDCTHead(FCNMaskHead):
     """
     A mask head with several conv layers, plus an upsample layer (with `ConvTranspose2d`).
     Predictions are made with a final 1x1 conv layer.
@@ -109,7 +109,7 @@ class MaskRCNNDCTHead(nn.Module):
         self.mask_size = mask_size
         self.loss_mask = build_loss(loss)
         self.class_agnostic = class_agnostic
-        self.dct_encoding = DctMaskEncoding(vec_dim=dct_vector_dim, mask_size=mask_size)
+        self.coder = DctMaskEncoding(vec_dim=dct_vector_dim, mask_size=mask_size)
 
         self.convs = nn.ModuleList()
         for i in range(num_convs):
@@ -141,7 +141,7 @@ class MaskRCNNDCTHead(nn.Module):
             nn.init.normal_(self.predictor_fc3.weight, std=0.001)
             nn.init.constant_(self.predictor_fc3.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x, decode=True):
         """
         Args:
             x: input region feature(s) provided by :class:`ROIHeads`.
@@ -154,14 +154,17 @@ class MaskRCNNDCTHead(nn.Module):
         x = F.relu(self.predictor_fc1(x))
         x = F.relu(self.predictor_fc2(x))
         x = self.predictor_fc3(x)
-        return x
+        if decode == False:
+            return x
+        else:
+            return self.coder.decode(x)
 
     def loss(self, mask_pred, mask_targets, labels):
         loss = dict()
         if mask_pred.size(0) == 0:
             loss_mask = mask_pred.sum()
         else:
-            mask_targets = self.dct_encoding.encode(mask_targets)
+            mask_targets = self.coder.encode(mask_targets)
             if self.class_agnostic:
                 loss_mask = self.loss_mask(mask_pred, mask_targets)
             else:
@@ -169,22 +172,13 @@ class MaskRCNNDCTHead(nn.Module):
         loss['loss_mask'] = loss_mask
         return loss
 
-    def get_targets(self, sampling_results, gt_masks, rcnn_train_cfg):
-        pos_proposals = [res.pos_bboxes for res in sampling_results]
-        pos_assigned_gt_inds = [
-            res.pos_assigned_gt_inds for res in sampling_results
-        ]
-        mask_targets = mask_target(pos_proposals, pos_assigned_gt_inds,
-                                   gt_masks, rcnn_train_cfg)
-        return mask_targets
-
 
 if __name__ == '__main__':
     n = 13
     # test model
     m = MaskRCNNDCTHead()
     t = torch.rand(n, 256, 14, 14)
-    res_head = m(t)
+    res_head = m(t)  # shape (13, 300)
 
     # test loss
 
