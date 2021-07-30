@@ -1,14 +1,13 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-
+from rflib.runner import BaseModule
 from rfvision.models.builder import NECKS
 
 
 @NECKS.register_module()
-class DenseFusionEstimatorNeck(nn.Module):
-    def __init__(self, num_points):
-        super(DenseFusionEstimatorNeck, self).__init__()
+class DenseFusionEstimatorNeck(BaseModule):
+    def __init__(self, num_points, init_cfg=None):
+        super(DenseFusionEstimatorNeck, self).__init__(init_cfg)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
 
@@ -39,9 +38,9 @@ class DenseFusionEstimatorNeck(nn.Module):
         return torch.cat([pointfeat_1, pointfeat_2, ap_x], 1) #128 + 256 + 1024
 
 @NECKS.register_module()
-class DenseFusionRefinerNeck(nn.Module):
-    def __init__(self, num_points):
-        super(DenseFusionRefinerNeck, self).__init__()
+class DenseFusionRefinerNeck(BaseModule):
+    def __init__(self, num_points, init_cfg=None):
+        super(DenseFusionRefinerNeck, self).__init__(init_cfg)
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
 

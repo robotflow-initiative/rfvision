@@ -5,22 +5,20 @@ This impementation based on https://github.com/hhaAndroid/mmdetection-mini
 
 from collections import OrderedDict
 import torch.nn as nn
-from torch.nn.modules.batchnorm import _BatchNorm
-
-from rflib.runner import load_checkpoint
-from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rflib.runner import BaseModule
+from rflib.cnn import ConvModule
 from rfvision.models.builder import BACKBONES
-import logging
 
 
 @BACKBONES.register_module()
-class YOLOV3TinyBackbone(nn.Module):
+class YOLOV3TinyBackbone(BaseModule):
     def __init__(self,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='LeakyReLU', negative_slope=0.1)
+                 act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
+                 init_cfg=None,
                  ):
-        super(YOLOV3TinyBackbone, self).__init__()
+        super(YOLOV3TinyBackbone, self).__init__(init_cfg)
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
 
         # Network
@@ -52,18 +50,6 @@ class YOLOV3TinyBackbone(nn.Module):
         ]
 
         self.layers = nn.ModuleList([nn.Sequential(layer_dict) for layer_dict in layer_list])
-
-
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            logger = logging.getLogger()
-            load_checkpoint(self, init_cfg, strict=False, logger=logger)
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
 
     def forward(self, x):
         stem = self.layers[0](x)

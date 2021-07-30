@@ -1,18 +1,19 @@
-from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rflib.cnn import ConvModule
 from rfvision.components.utils.yolo_large_utils import SPPCSP, CSPBlock2, make_divisible, make_round
 from rfvision.models.builder import NECKS
-
-from torch.nn.modules.batchnorm import _BatchNorm
+from rflib.runner import BaseModule
 import torch.nn as nn
 import torch
+
 @NECKS.register_module()
-class YOLOV4LargeNeck(nn.Module):
+class YOLOV4LargeNeck(BaseModule):
     def __init__(self,
                  stage_name='P5',
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='Mish')):
-        super().__init__()
+                 act_cfg=dict(type='Mish'),
+                 init_cfg=None):
+        super().__init__(init_cfg)
         self.cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         assert stage_name in ['P5','P6','P7']
         
@@ -279,16 +280,5 @@ class YOLOV4LargeNeck(nn.Module):
         x28 = self.layers[26](x_0cat27)#512
         x29 = self.layers[27](x28)#1024
         return x29, x26, x23, x20, x17 # 1024, 1024, 1024, 512, 256
-        
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            pass
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
-        else:
-            raise TypeError('init_cfg must be a str or None')
+
         

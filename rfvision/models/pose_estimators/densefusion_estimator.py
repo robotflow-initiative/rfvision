@@ -10,8 +10,9 @@ class DenseFusionEstimator(BaseDetector):
                  neck,
                  pose_head,
                  train_cfg,
-                 test_cfg):
-        super(DenseFusionEstimator, self).__init__()
+                 test_cfg,
+                 init_cfg=None):
+        super(DenseFusionEstimator, self).__init__(init_cfg)
 
         self.backbone = build_backbone(backbone)
         self.neck = build_neck(neck)

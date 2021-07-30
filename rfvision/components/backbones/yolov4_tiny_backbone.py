@@ -5,11 +5,8 @@ This impementation based on https://github.com/hhaAndroid/mmdetection-mini
 from collections import OrderedDict
 import torch.nn as nn
 import torch
-import logging
-from torch.nn.modules.batchnorm import _BatchNorm
 from rfvision.models.builder import BACKBONES
-from rflib.cnn import ConvModule, kaiming_init, constant_init
-from rflib.runner import load_checkpoint
+from rflib.cnn import ConvModule
 from rflib.runner import BaseModule
 
 
@@ -82,17 +79,6 @@ class YOLOV4TinyBackbone(BaseModule):
         ])
 
         self.layers = nn.Sequential(backbone)
-
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            logger = logging.getLogger()
-            load_checkpoint(self, init_cfg, strict=False, logger=logger)
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
 
     def forward(self, x):
         stem, extra_x = self.layers(x)

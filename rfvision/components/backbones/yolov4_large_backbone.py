@@ -1,11 +1,10 @@
-from rflib.cnn import ConvModule, kaiming_init, constant_init
+from rflib.cnn import ConvModule
 from rflib.runner import BaseModule
 from rfvision.components.utils.yolo_large_utils import make_divisible, make_round, CSPBlock1
 from rfvision.models.builder import BACKBONES
 
 import torch.nn as nn
 from collections import OrderedDict
-from torch.nn.modules.batchnorm import _BatchNorm
 
 
 @BACKBONES.register_module()
@@ -105,17 +104,4 @@ class YOLOV4LargeBackbone(BaseModule):
             if i >= 3: # append output in stage 3~ 
                 feats += (feat,)
         return feats
-    
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            pass
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
-        else:
-            raise TypeError('init_cfg must be a str or None')
-            
  

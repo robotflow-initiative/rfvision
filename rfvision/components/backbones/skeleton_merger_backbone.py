@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 @BACKBONES.register_module()
 class PointNet2ForSkeletonMerger(BasePointNet):
-    def __init__(self, num_classes):
-        super().__init__()
+    def __init__(self, num_classes, init_cfg=None):
+        super().__init__(init_cfg)
         self.sa1 = PointSAModuleMSG(1024, [0.05, 0.1], [16, 32], [[6, 16, 16, 32], [6, 32, 32, 64]])
         self.sa2 = PointSAModuleMSG(256, [0.1, 0.2], [16, 32], [[32+64, 64, 64, 128], [32+64, 64, 96, 128]])
         self.sa3 = PointSAModuleMSG(64, [0.2, 0.4], [16, 32], [[128+128, 128, 196, 256], [128+128, 128, 196, 256]])

@@ -46,10 +46,3 @@ class YOLOV4TinyHead(YOLOV3Head):
         stage2 = torch.cat((stage1, extra_x), dim=1)
         head1 = self.layers[3](stage2)  
         return (head0, head1),
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                kaiming_init(m)
-            elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                constant_init(m, 1)

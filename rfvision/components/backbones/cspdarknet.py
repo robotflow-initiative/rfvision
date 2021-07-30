@@ -32,7 +32,6 @@ class ResBlock(BaseModule):
     def forward(self, x):
         return x + self.block(x)
 
-# CSPdarknet的结构块
 class CSPBlock(BaseModule):
     def __init__(self, 
                  in_channels, 
@@ -100,18 +99,6 @@ class CSPDarknet(BaseModule):
             CSPBlock(self.channels[4], self.channels[5], self.layers[4], first=False,**cfg)
         ])
 
-        if init_cfg is None:
-            self.init_cfg = [
-                dict(type='Kaiming', layer='Conv2d'),
-                dict(
-                    type='Constant',
-                    val=1,
-                    layer=['_BatchNorm', 'GroupNorm'])
-            ]
-        elif isinstance(init_cfg, str):
-            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
-        else:
-            raise TypeError('init_cfg must be a str or None')
 
     def forward(self, x):
         x = self.conv0(x)
@@ -121,18 +108,6 @@ class CSPDarknet(BaseModule):
         out4 = self.stages[3](out3)
         out5 = self.stages[4](out4)
         return [out3, out4, out5]
-    
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            logger = logging.getLogger()
-            load_checkpoint(self, init_cfg, strict=False, logger=logger)
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
-
 
 if __name__ == '__main__':
     import numpy as np

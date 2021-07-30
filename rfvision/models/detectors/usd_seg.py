@@ -19,7 +19,8 @@ class USDSegYOLOV3(YOLOV3):
                  num_bases=-1,
                  bases_path=None,
                  method='None',
-                 use_mask_loss=False):
+                 use_mask_loss=False,
+                 ):
         super(USDSegYOLOV3, self).__init__(backbone, neck, bbox_head,
                                            train_cfg, test_cfg, init_cfg)
 

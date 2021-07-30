@@ -2,11 +2,7 @@ from rfvision.models.builder import HEADS, build_loss
 from rfvision.components.utils.dct_utils import dct_2d, idct_2d
 from rfvision.components.roi_heads.mask_heads import FCNMaskHead
 from rflib.cnn import ConvModule
-from rflib.cnn import kaiming_init, constant_init
-from rflib.runner import load_checkpoint
-import logging
 import torch.nn as nn
-from torch.nn.modules.batchnorm import _BatchNorm
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -102,7 +98,7 @@ class MaskRCNNDCTHead(FCNMaskHead):
                  act_cfg=dict(type='ReLU'),
                  init_cfg=None):
 
-        super().__init__()
+        super().__init__(init_cfg)
 
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         self.dct_vector_dim = dct_vector_dim
@@ -126,18 +122,9 @@ class MaskRCNNDCTHead(FCNMaskHead):
         self.predictor_fc2 = nn.Linear(1024, 1024)
         self.predictor_fc3 = nn.Linear(1024, dct_vector_dim)
 
-        self.init_weights(init_cfg)
-
     def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            logger = logging.getLogger()
-            load_checkpoint(self, init_cfg, strict=False, logger=logger)
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
+        super().init_weights()
+        if self.init_cfg is not None:
             nn.init.normal_(self.predictor_fc3.weight, std=0.001)
             nn.init.constant_(self.predictor_fc3.bias, 0)
 
