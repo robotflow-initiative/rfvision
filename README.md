@@ -16,7 +16,7 @@ This project is released under the [Apache 2.0 license](./LICENSE).
    + [x] Mask RCNN
    + [x] PANet
    + [x] HTC
-   + [ ] DCT-Mask
+   + [x] DCT-Mask
    + [x] FCOS
    + [ ] SOLOv2
    + [x] YOLOv3/3-tiny/4/4-tiny/4-large
