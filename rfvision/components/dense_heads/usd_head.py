@@ -72,8 +72,9 @@ class USDSegYOLOV3Head(BaseDenseHead):
                  method='None',
                  loss_mask=None,
                  coef_weight=1,
+                 init_cfg=None,
         ):
-        super(USDSegYOLOV3Head, self).__init__()
+        super(USDSegYOLOV3Head, self).__init__(init_cfg)
         # Check params
         assert (num_scales == len(in_channels) == len(out_channels) ==
                 len(strides) == len(anchor_base_sizes))
@@ -138,11 +139,6 @@ class USDSegYOLOV3Head(BaseDenseHead):
             self.loss_mask = None
         else:
             self.loss_mask = build_loss(loss_mask)
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                xavier_init(m, distribution='uniform')
 
     def forward(self, feats):
         assert len(feats) == self.num_scales

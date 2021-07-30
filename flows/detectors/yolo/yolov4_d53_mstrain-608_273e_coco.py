@@ -41,7 +41,7 @@ model = dict(
         assigner=dict(
             type='GridAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0),
     ),
-    test_cfg = dict(
+    test_cfg=dict(
         nms_pre=1000,
         min_bbox_size=0,
         score_thr=0.05,

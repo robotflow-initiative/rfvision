@@ -105,7 +105,7 @@ class Darknet(BaseModule):
                  act_cfg=dict(type='LeakyReLU', negative_slope=0.1),
                  norm_eval=True,
                  init_cfg=None):
-        super(Darknet, self).__init__(None)
+        super(Darknet, self).__init__(init_cfg)
         if depth not in self.arch_settings:
             raise KeyError(f'invalid depth {depth} for darknet')
 
@@ -128,19 +128,6 @@ class Darknet(BaseModule):
             self.cr_blocks.append(layer_name)
 
         self.norm_eval = norm_eval
-
-        if init_cfg is None:
-            self.init_cfg = [
-                dict(type='Kaiming', layer='Conv2d'),
-                dict(
-                    type='Constant',
-                    val=1,
-                    layer=['_BatchNorm', 'GroupNorm'])
-            ]
-        elif isinstance(init_cfg, str):
-            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
-        else:
-            raise TypeError('init_cfg must be a str or None')
 
     def forward(self, x):
         outs = []

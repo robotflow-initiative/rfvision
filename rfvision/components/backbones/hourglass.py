@@ -114,7 +114,7 @@ class HourglassNet(BaseModule):
             Default: None
 
     Example:
-        >>> from rfvision.models import HourglassNet
+        >>> from rfvision.components import HourglassNet
         >>> import torch
         >>> self = HourglassNet()
         >>> self.eval()

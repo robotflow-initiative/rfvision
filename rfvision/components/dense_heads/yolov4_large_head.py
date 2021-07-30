@@ -16,16 +16,3 @@ class YOLOV4LargeHead(YOLOV3Head):
             head_out = self.m[i](feats[i])
             head_outs.append(head_out)
         return tuple(head_outs),
-        
-        
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            pass
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
-        else:
-            raise TypeError('init_cfg must be a str or None')

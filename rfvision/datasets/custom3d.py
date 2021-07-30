@@ -304,3 +304,4 @@ class Custom3DDataset(Dataset):
         zeros.
         """
         self.flag = np.zeros(len(self), dtype=np.uint8)
+

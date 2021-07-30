@@ -1,6 +1,5 @@
 from rfvision.models.builder import DETECTORS, build_backbone, build_head
 from rfvision.models import BaseDetector
-from rflib.runner import load_checkpoint
 import torch
 import open3d as o3d
 import numpy as np
@@ -74,12 +73,6 @@ class SkeletonMerger(BaseDetector):
         if out_dir is not None:
             img_name = os.path.join(out_dir, metas['model_id'] + '.png')
             vis.capture_screen_image(img_name, do_render=True)
-
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            from rfvision.utils import get_root_logger
-            logger = get_root_logger()
-            load_checkpoint(self, init_cfg, strict=False, logger=logger)
 
     def simple_test(self, img, img_metas, **kwargs):
         pass

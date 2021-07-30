@@ -37,10 +37,3 @@ class YOLOV3TinyHead(YOLOV3Head):
         stage5_upsample = self.layers[1](feats[0])
         stage5 = self.layers[2](torch.cat((stage5_upsample, feats[1]), 1))
         return (stage6, stage5),
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                kaiming_init(m)
-            elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                constant_init(m, 1)

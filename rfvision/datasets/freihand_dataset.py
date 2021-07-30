@@ -32,22 +32,23 @@ class FreiHandDataset(Dataset):
         ##################### split setting ###################
         split_ratio = [0.998, 0.001, 0.001]  # train / test / val
         shuffle = True
+        total_length = len(self.training_xyz)
         ###################################################
         np.random.seed(0)
         assert sum(split_ratio) == 1
-        split_id = np.arange(len(self.training_xyz))
+        split_id = np.arange(total_length)
         if shuffle == True:
             np.random.seed(0)
             np.random.shuffle(split_id)
 
         if split == 'train':
-            self.length = int(len(self.training_xyz) * split_ratio[0])
+            self.length = int(total_length * split_ratio[0])
             self.split_id = split_id[:self.length]
         elif split == 'test':
-            self.length = int(len(self.training_xyz) * (1 - split_ratio[0]))
+            self.length = int(total_length * (1 - split_ratio[0]))
             self.split_id = split_id[self.length:]
         elif split == 'val':
-            self.length = int(len(self.training_xyz) * (1 - split_ratio[0] - split_ratio[1]))
+            self.length = int(total_length * (1 - split_ratio[0] - split_ratio[1]))
             self.split_id = split_id[self.length:]
         self.pipeline = Compose(pipeline)
         self._set_group_flag()
@@ -75,37 +76,39 @@ class FreiHandDataset(Dataset):
 
 
     def evaluate(self, results, res_folder, metric, **kwargs):
+        # notes:
+        # kps: keypoints
         metrics = metric if isinstance(metric, list) else [metric]
         allowed_metrics = ['PCK', 'AUC', 'EPE']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
 
-        gt_joints_uv, pred_joints_uv = (), ()
-        gt_joints_uv_visible = ()
+        gt_kps, pred_kps = (), ()
+        gt_kps_visible = ()
         for i in range(len(results)):
             gt_result = self[i]
             pred_result = results[i]
 
-            gt_joints_uv_visible += (gt_result['joints_uv_visible'],)
-            gt_joints_uv += (gt_result['joints_uv'],)
-            pred_joints_uv += (pred_result['joints_uv'],)
+            gt_kps_visible += (gt_result['kps_visible'],)
+            gt_kps += (gt_result['kps'],)
+            pred_kps += (pred_result['kps'],)
 
-        gt_joints_uv_visible = np.array(gt_joints_uv_visible)
-        gt_joints_uv = np.array(gt_joints_uv)
-        pred_joints_uv = np.array(torch.cat(pred_joints_uv).cpu())
+        gt_kps_visible = np.array(gt_kps_visible)
+        gt_kps = np.array(gt_kps)
+        pred_kps = np.array(torch.cat(pred_kps).cpu())
 
         normalize = np.ones((len(results), 2))
 
         score = {}
         for metric in metrics:
             if metric == 'EPE':
-                score['EPE'] = keypoint_epe(pred_joints_uv, gt_joints_uv, gt_joints_uv_visible)
+                score['EPE'] = keypoint_epe(pred_kps, gt_kps, gt_kps_visible)
             elif metric == 'AUC':
-                score['AUC'] = keypoint_auc(pred_joints_uv, gt_joints_uv, gt_joints_uv_visible,
+                score['AUC'] = keypoint_auc(pred_kps, gt_kps, gt_kps_visible,
                                             normalize=normalize)
             elif metric == 'PCK':
-                score['PCK'] = keypoint_pck_accuracy(pred_joints_uv, gt_joints_uv, gt_joints_uv_visible,
+                score['PCK'] = keypoint_pck_accuracy(pred_kps, gt_kps, gt_kps_visible,
                                                      thr=0.2,
                                                      normalize=normalize)[1]
 

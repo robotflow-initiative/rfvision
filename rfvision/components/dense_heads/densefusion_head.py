@@ -1,17 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from rflib.runner import BaseModule
 from rfvision.models.builder import build_loss, HEADS
 
 
 @HEADS.register_module()
-class DenseFusionRefinerHead(nn.Module):
+class DenseFusionRefinerHead(BaseModule):
     def __init__(self,
                  num_points,
                  num_objects,
-                 loss_dis=None):
-        super(DenseFusionRefinerHead, self).__init__()
+                 loss_dis=None,
+                 init_cfg=None):
+        super(DenseFusionRefinerHead, self).__init__(init_cfg)
         self.num_points = num_points
 
         self.conv1_r = torch.nn.Linear(1024, 512)
@@ -53,12 +54,13 @@ class DenseFusionRefinerHead(nn.Module):
     
     
 @HEADS.register_module()
-class DenseFusionEstimatorHead(nn.Module):
+class DenseFusionEstimatorHead(BaseModule):
     def __init__(self,
                  num_points,
                  num_objects,
-                 loss_dis=None):
-        super(DenseFusionEstimatorHead, self).__init__()
+                 loss_dis=None,
+                 init_cfg=None):
+        super(DenseFusionEstimatorHead, self).__init__(init_cfg)
         self.num_points = num_points
 
         self.conv1_r = torch.nn.Conv1d(1408, 640, 1)

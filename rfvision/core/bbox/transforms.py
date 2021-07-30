@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-
+import cv2
+import warnings
 
 def bbox_flip(bboxes, img_shape, direction='horizontal'):
     """Flip bboxes horizontally or vertically.
@@ -238,3 +239,55 @@ def bbox_xyxy_to_cxcywh(bbox):
     x1, y1, x2, y2 = bbox.split((1, 1, 1, 1), dim=-1)
     bbox_new = [(x1 + x2) / 2, (y1 + y2) / 2, (x2 - x1), (y2 - y1)]
     return torch.cat(bbox_new, dim=-1)
+
+
+def bbox_mask2result(bboxes, coefs, labels, num_classes, img_meta, bases, method):
+    """Convert detection results to a list of numpy arrays.
+    Args:
+        bboxes (Tensor): shape (n, 5)
+        coefs (Tensor): shape (n, num_bases)
+        labels (Tensor): shape (n, )
+        num_classes (int): class number, including background class
+    Returns:
+        list(ndarray): bbox results of each class
+    """
+    ori_shape = img_meta['ori_shape']
+    img_h, img_w, _ = ori_shape
+
+    mask_results = [[] for _ in range(num_classes)]
+    if bboxes.shape[0] == 0:
+        bbox_results = [
+            np.zeros((0, 5), dtype=np.float32) for i in range(num_classes)
+        ]
+        return bbox_results, mask_results
+
+
+    if method == 'cosine_r':
+        coefs[:, 0] *= 30
+        coefs[:, 1] *= 10
+    masks = torch.mm(coefs, bases).cpu().numpy().reshape((-1, 64, 64))
+
+    for label, mask, bbox in zip(labels, masks, bboxes):
+        im_mask = np.zeros((img_h, img_w), dtype=np.bool)
+
+        x1, y1, x2, y2, _ = (int(_x) for _x in bbox)
+        x1, x2, y1, y2 = min(x1, x2), max(x1, x2), min(y1, y2), max(y1, y2)
+        x1, x2, y1, y2 = max(x1, 0), min(x2, img_w), max(y1, 0), min(y2, img_h)
+        # Valid size
+        try:
+            resized = cv2.resize(mask, (x2-x1, y2-y1))
+        except:
+            warnings.warn('Error occurred when OpenCV was trying to resize the image. '
+                           f'Info: {x1}/{y1}/{x2}/{y2}/{img_w}/{img_h}. Skipping...')
+            mask_results[label].append(im_mask)
+            continue
+        if method == 'cosine' or method == 'cosine_r':
+            resized = (resized > 0)
+        im_mask[y1:y2, x1:x2] = resized.astype(np.bool)
+
+        mask_results[label].append(im_mask)
+
+    bboxes = bboxes.cpu().numpy()
+    labels = labels.cpu().numpy()
+    bbox_results = [bboxes[labels == i, :] for i in range(num_classes)]
+    return bbox_results, mask_results

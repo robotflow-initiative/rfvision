@@ -23,7 +23,7 @@ class TwoStageDetector(BaseDetector):
                  test_cfg=None,
                  init_cfg=None):
         super(TwoStageDetector, self).__init__(init_cfg)
-        backbone.init_cfg = init_cfg
+
         self.backbone = build_backbone(backbone)
 
         if neck is not None:

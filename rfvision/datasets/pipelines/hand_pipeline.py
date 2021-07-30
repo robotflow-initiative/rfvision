@@ -22,8 +22,8 @@ class GetJointsUV:
         img_shape = np.array(results['img_shape'][:2]).reshape(-1, 2)
         joints_uv = xyz2uv(results['joints_xyz'], results['K'])
         # joints_uv_visible: joints_uv inside image boundary is visible (set to 1) and joints_uv out of image
-        # boundary is invisible (set to 0)
-        # Typically, joint_uv = (126, 262), image boundary wh = (224, 224), thus this joint is invisible. (Due to v (262) > h (224) )
+        # boundary is invisible (set to 0) Typically, joint_uv = (126, 262), image boundary wh = (224, 224),
+        # thus this joint is invisible. (Due to v (262) > h (224) )
         bool_matrix = joints_uv < img_shape
         joints_uv_visible = np.logical_and(bool_matrix[:, 0], bool_matrix[:, 1]).astype('int32')
 

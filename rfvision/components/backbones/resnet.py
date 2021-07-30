@@ -394,31 +394,6 @@ class ResNet(BaseModule):
 
         block_init_cfg = None
 
-        if init_cfg is None:
-            self.init_cfg = [
-                dict(type='Kaiming', layer='Conv2d'),
-                dict(
-                    type='Constant',
-                    val=1,
-                    layer=['_BatchNorm', 'GroupNorm'])
-            ]
-            block = self.arch_settings[depth][0]
-            if self.zero_init_residual:
-                if block is BasicBlock:
-                    block_init_cfg = dict(
-                        type='Constant',
-                        val=0,
-                        override=dict(name='norm2'))
-                elif block is Bottleneck:
-                    block_init_cfg = dict(
-                        type='Constant',
-                        val=0,
-                        override=dict(name='norm3'))
-        elif isinstance(init_cfg, str):
-            self.init_cfg = dict(type='Pretrained', checkpoint=init_cfg)
-        else:
-            raise TypeError('init_cfg must be a str or None')
-
         self.depth = depth
         if stem_channels is None:
             stem_channels = base_channels

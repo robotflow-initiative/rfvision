@@ -1,25 +1,23 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-import logging
-from torch.nn.modules.batchnorm import _BatchNorm
-from rflib.cnn import kaiming_init, constant_init
-from rflib.runner import load_checkpoint
+from rflib.runner import BaseModule
 from rfvision.components.utils import (normalize_quaternion, quaternion_to_angle_axis,
                                        quaternion_mul, quaternion_inv)
 from rfvision.models.builder import BACKBONES
 
 
 @BACKBONES.register_module()
-class IKNetBackbone(nn.Module):
+class IKNetBackbone(BaseModule):
     def __init__(
         self,
         num_joints=21, # 21 joints
         hidden_channels=[256, 512, 1024, 1024, 512, 256],
         out_channels=16 * 4,   # 16 quats
+        init_cfg=None
     ):
 
-        super().__init__()
+        super().__init__(init_cfg)
         self.num_joints = num_joints
         self.in_channels = self.num_joints * 3
         self.out_channels = out_channels
@@ -43,20 +41,6 @@ class IKNetBackbone(nn.Module):
         so3 = quaternion_to_angle_axis(quat).contiguous()
         so3 = so3.view(-1, 16 * 3)
         return so3, quat
-
-    def init_weights(self, init_cfg=None):
-        if isinstance(init_cfg, str):
-            logger = logging.getLogger()
-            load_checkpoint(self, init_cfg, strict=False, logger=logger)
-        elif init_cfg is None:
-            for m in self.modules():
-                if isinstance(m, nn.Conv2d):
-                    kaiming_init(m)
-                elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
-                    constant_init(m, 1)
-
-        else:
-            raise TypeError('init_cfg must be a str or None')
 
     @staticmethod
     def loss_ik(pred_quat, gt_quat):

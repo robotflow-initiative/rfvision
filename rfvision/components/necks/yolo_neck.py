@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from rflib.cnn import ConvModule, xavier_init
+from rflib.cnn import ConvModule
 from rflib.runner import BaseModule
 
 from rfvision.models.builder import NECKS
@@ -207,15 +207,13 @@ class YOLOV3Neck(BaseModule):
 
 
 @NECKS.register_module()
-class YOLOV4Neck(nn.Module):
-    '''
-    '''
-    
+class YOLOV4Neck(BaseModule):
     def __init__(self,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN', requires_grad=True),
-                 act_cfg=dict(type='Mish')):
-        super(YOLOV4Neck, self).__init__()
+                 act_cfg=dict(type='Mish'),
+                 init_cfg=None):
+        super(YOLOV4Neck, self).__init__(init_cfg)
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         
         self.layers = nn.ModuleList([
@@ -247,11 +245,6 @@ class YOLOV4Neck(nn.Module):
         out5 = self.layers[4]([out4, out5])
 
         return (out5, out4, out3)
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                xavier_init(m, distribution='uniform')
                 
                 
                 

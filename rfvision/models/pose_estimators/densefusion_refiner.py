@@ -8,8 +8,9 @@ class DenseFusionRefiner(BaseDetector):
                  neck,
                  pose_head,
                  train_cfg,
-                 test_cfg):
-        super(DenseFusionRefiner, self).__init__()
+                 test_cfg,
+                 init_cfg=None):
+        super(DenseFusionRefiner, self).__init__(init_cfg)
 
         self.neck = build_neck(neck)
         self.pose_head = build_head(pose_head)
