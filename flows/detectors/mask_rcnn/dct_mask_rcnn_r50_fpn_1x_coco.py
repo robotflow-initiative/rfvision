@@ -69,7 +69,7 @@ model = dict(
             num_convs=5,
             in_channels=256,
             dct_vector_dim=300,
-            mask_size=128,
+            mask_size=mask_size,
             loss=dict(type='L1Loss', loss_weight=1.0),
             class_agnostic=False,
             conv_cfg=None,

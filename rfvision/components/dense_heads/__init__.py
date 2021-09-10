@@ -13,10 +13,11 @@ from .vote_head import VoteHead
 from .skeleton_merger_head import SkeletonMergerHead
 from .densefusion_head import DenseFusionEstimatorHead, DenseFusionRefinerHead
 from .ancsh_head import ANCSHHead
+from .solo_head import SOLOv2Head, MaskFeatHead
 __all__ = [
     'AnchorFreeHead', 'AnchorHead', 
     'RPNHead', 'FCOSHead', 'YOLOV3Head', 'StageCascadeRPNHead',
-    'CascadeRPNHead','CascadeRPNHead',
+    'CascadeRPNHead','CascadeRPNHead', 'SOLOv2Head', 'MaskFeatHead',
     'YOLOV3TinyHead', 'YOLOV4TinyHead', 'USDSegYOLOV3Head', 'USDSegFCOSHead',
     'VoteHead', 'BaseConvBboxHead', 'YOLOV4LargeHead', 'SkeletonMergerHead',
     'DenseFusionEstimatorHead', 'DenseFusionRefinerHead', 'ANCSHHead'

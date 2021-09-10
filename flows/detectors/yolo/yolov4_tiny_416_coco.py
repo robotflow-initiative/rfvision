@@ -1,7 +1,7 @@
 _base_ = '../_base_/default_runtime.py'
 # model settings
 model = dict(
-    type='YOLOV4Tiny',
+    type='SingleStageDetector',
     init_cfg='weights/yolov4_tiny.pth',
     backbone=dict(type='YOLOV4TinyBackbone'),
     neck=None,

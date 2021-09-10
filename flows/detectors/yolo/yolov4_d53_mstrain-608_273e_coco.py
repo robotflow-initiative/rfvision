@@ -1,7 +1,7 @@
 _base_ = '../_base_/default_runtime.py'
 # model settings
 model = dict(
-    type='YOLOV4',
+    type='SingleStageDetector',
     init_cfg='/home/hanyang/weights/yolov4_608.pth',
     backbone=dict(type='CSPDarknet',
                   act_cfg=dict(type='Mish'),),
