@@ -1,4 +1,4 @@
-from rfvision.models.builder import build_detector, POSE_ESTIMATORS, build_pose_estimators
+from rfvision.models.builder import POSE_ESTIMATORS, build_pose_estimator
 import numpy as np
 from ..detectors import BaseDetector
 
@@ -14,8 +14,8 @@ class DenseFusion(BaseDetector):
                  init_cfg=None):
         super(DenseFusion, self).__init__(init_cfg)
 
-        self.estimator = build_pose_estimators(estimator)
-        self.refiner = build_pose_estimators(refiner)
+        self.estimator = build_pose_estimator(estimator)
+        self.refiner = build_pose_estimator(refiner)
 
         self.refine = refine
         self.iteration = iteration

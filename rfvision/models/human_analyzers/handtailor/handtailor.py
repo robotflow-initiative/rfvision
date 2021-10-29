@@ -1,4 +1,4 @@
-from rfvision.models.builder import build_backbone, build_loss, build_human_analyzers, HUMAN_ANALYZERS
+from rfvision.models.builder import build_backbone, build_loss, build_human_analyzer, HUMAN_ANALYZERS
 from rfvision.models import BaseDetector
 from rfvision.components.utils import heatmap_to_uv, batch_uv2xyz
 import torch
@@ -58,7 +58,7 @@ class HandTailor(BaseDetector):
         self.backbone_2d = build_backbone(backbone_2d)
         self.backbone_3d = build_backbone(backbone_3d)
         self.manonet = build_backbone(manonet)
-        self.iknet = build_human_analyzers(iknet)
+        self.iknet = build_human_analyzer(iknet)
 
         self.loss_2d = build_loss(loss_2d)
         self.loss_3d = build_loss(loss_3d)

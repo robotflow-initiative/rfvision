@@ -64,8 +64,8 @@ def build_detector(cfg, train_cfg=None, test_cfg=None):
         cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
 
 
-def build_human_analyzers(cfg, train_cfg=None, test_cfg=None):
-    """Build human_analyzers."""
+def build_human_analyzer(cfg, train_cfg=None, test_cfg=None):
+    """Build human_analyzer."""
     if train_cfg is not None or test_cfg is not None:
         warnings.warn(
             'train_cfg and test_cfg is deprecated, '
@@ -78,8 +78,8 @@ def build_human_analyzers(cfg, train_cfg=None, test_cfg=None):
         cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
 
 
-def build_pose_estimators(cfg, train_cfg=None, test_cfg=None):
-    """Build pose_estimators."""
+def build_pose_estimator(cfg, train_cfg=None, test_cfg=None):
+    """Build pose_estimator."""
     if train_cfg is not None or test_cfg is not None:
         warnings.warn(
             'train_cfg and test_cfg is deprecated, '
@@ -90,3 +90,11 @@ def build_pose_estimators(cfg, train_cfg=None, test_cfg=None):
         'test_cfg specified in both outer field and model field '
     return POSE_ESTIMATORS.build(
         cfg, default_args=dict(train_cfg=train_cfg, test_cfg=test_cfg))
+
+VALID_TAG_LIST = ["detector", "human_analyzer", "pose_estimator", "touch_processor"]
+
+def build_model(model_tag, cfg, train_cfg=None, test_cfg=None):
+    if model_tag in VALID_TAG_LIST:
+        return eval("build_{}".format(model_tag))(cfg, train_cfg=train_cfg, test_cfg=test_cfg)
+    else:
+        raise ValueError("model tag {} is not supported right now, it has to be one of ({}).".format(model_tag, ",".join(VALID_TAG_LIST)))
