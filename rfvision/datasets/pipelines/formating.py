@@ -326,6 +326,10 @@ class Collect:
                 - ``img_metas``
         """
 
+        #################tycoer##############
+        if 'ann_info' in results:
+            results.update(results['ann_info'])
+        #####################################
         data = {}
         img_meta = {}
         for key in self.meta_keys:

@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import rflib
 import numpy as np
 from concurrent import futures as futures
@@ -111,8 +112,9 @@ class SUNRGBDData(object):
         calib_filepath = osp.join(self.calib_dir, f'{idx:06d}.txt')
         lines = [line.rstrip() for line in open(calib_filepath)]
         Rt = np.array([float(x) for x in lines[0].split(' ')])
-        Rt = np.reshape(Rt, (3, 3), order='F')
+        Rt = np.reshape(Rt, (3, 3), order='F').astype(np.float32)
         K = np.array([float(x) for x in lines[1].split(' ')])
+        K = np.reshape(K, (3, 3), order='F').astype(np.float32)
         return K, Rt
 
     def get_label_objects(self, idx):
@@ -155,8 +157,7 @@ class SUNRGBDData(object):
                 osp.join(self.root_dir, 'points', f'{sample_idx:06d}.bin'))
 
             info['pts_path'] = osp.join('points', f'{sample_idx:06d}.bin')
-            img_name = osp.join(self.image_dir, f'{sample_idx:06d}')
-            img_path = osp.join(self.image_dir, img_name)
+            img_path = osp.join('image', f'{sample_idx:06d}.jpg')
             image_info = {
                 'image_idx': sample_idx,
                 'image_shape': self.get_image_shape(sample_idx),
@@ -191,9 +192,9 @@ class SUNRGBDData(object):
                     ],
                                                              axis=0)
                     annotations['dimensions'] = 2 * np.array([
-                        [obj.l, obj.h, obj.w] for obj in obj_list
+                        [obj.l, obj.w, obj.h] for obj in obj_list
                         if obj.classname in self.cat2label.keys()
-                    ])  # lhw(depth) format
+                    ])  # lwh (depth) format
                     annotations['rotation_y'] = np.array([
                         obj.heading_angle for obj in obj_list
                         if obj.classname in self.cat2label.keys()

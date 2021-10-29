@@ -99,7 +99,7 @@ class YOLOV4(nn.Module):
         return x
 
 if __name__ == '__main__':
-    weight_path = '/home/hanyang/weights/yolov4_multisize_mish_leaky.weights'
+    weight_path = '/home/hanyang/weights/yolov4.conv.137'
     m = YOLOV4(pretrained=weight_path)
     new_state_dict = OrderedDict()
 
@@ -130,4 +130,4 @@ if __name__ == '__main__':
             name = k
         new_state_dict[name] = v
     data = {"state_dict": new_state_dict}
-    torch.save(data, '/home/hanyang/weights/yolov4_multisize_mish_leaky.pth')
+    torch.save(data, '/home/hanyang/weights/yolov4_conv_137.pth')

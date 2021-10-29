@@ -6,3 +6,5 @@ six
 terminaltables
 h5py
 jax
+numba
+json_tricks

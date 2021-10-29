@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from rfvision.models.roi_heads.roi_extractors import GenericRoIExtractor
+from rfvision.components.roi_heads.roi_extractors import GenericRoIExtractor
 
 
 def test_groie():

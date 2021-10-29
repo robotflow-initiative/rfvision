@@ -7,7 +7,10 @@ from . import DATASETS
 from .custom3d import Custom3DDataset
 from .pipelines import Compose
 import rflib
-from rflib.utils import print_log
+from rfvision.core.evaluation_pose import keypoint_epe, keypoint_pck_accuracy,  keypoint_auc
+
+
+
 ID_CLASSES = {"02691156": "airplane",
               "02808440": "bathtub",
               "02818832": "bed",
@@ -24,15 +27,17 @@ ID_CLASSES = {"02691156": "airplane",
               "04225987": "skateboard",
               "04379243": "table",
               "04530566": "vessel",}
+
 CLASSES_ID = {value:key for key, value in ID_CLASSES.items()}
 CLASSES_ALL = list(CLASSES_ID.keys())
 ID_ALL = list(CLASSES_ID.values())
 ID2LABEL = {ID:i for i,ID in enumerate(ID_ALL)}
 
+
 @DATASETS.register_module()
 class KeypointNetDataset(Custom3DDataset):
     def __init__(self,
-                 data_root, 
+                 data_root,
                  split_file_root='./data/keypointnet',
                  split='test',
                  with_ply=False,
@@ -216,9 +221,9 @@ class KeypointNetDataset(Custom3DDataset):
         
     def evaluate(self,
                  results,
-                 metric = 'DAS',
+                 metric='DAS',
                  logger=None,
-                 by_epoch=None, 
+                 by_epoch=None,
                  ):
 
         assert metric in ['DAS', 'mIoU']
@@ -241,5 +246,46 @@ class KeypointNetDataset(Custom3DDataset):
             ret_dict = {'mIoU': float(mIoU)}
         return ret_dict
 
+
+    # def evaluate(self, results, metric, **kwargs):
+    #     # notes:
+    #     # kps: keypoints
+    #     metrics = metric if isinstance(metric, list) else [metric]
+    #     allowed_metrics = ['PCK', 'AUC', 'EPE']
+    #     for metric in metrics:
+    #         if metric not in allowed_metrics:
+    #             raise KeyError(f'metric {metric} is not supported')
+    #
+    #     gt_kps, pred_kps = (), ()
+    #     gt_kps_visible = ()
+    #     for i in range(len(results)):
+    #         gt_result = self[i]
+    #         pred_result = results[i]
+    #
+    #         gt_kps_visible += (gt_result['kps_visible'],)
+    #         gt_kps += (gt_result['kps'],)
+    #         pred_kps += (pred_result['kps'],)
+    #
+    #     gt_kps_visible = np.array(gt_kps_visible)
+    #     gt_kps = np.array(gt_kps)
+    #     pred_kps = np.array(torch.cat(pred_kps).cpu())
+    #
+    #     normalize = np.ones((len(results), 2))
+    #
+    #     score = {}
+    #     for metric in metrics:
+    #         if metric == 'EPE':
+    #             score['EPE'] = keypoint_epe(pred_kps, gt_kps, gt_kps_visible)
+    #         elif metric == 'AUC':
+    #             score['AUC'] = keypoint_auc(pred_kps, gt_kps, gt_kps_visible,
+    #                                         normalize=normalize)
+    #         elif metric == 'PCK':
+    #             score['PCK'] = keypoint_pck_accuracy(pred_kps, gt_kps, gt_kps_visible,
+    #                                                  thr=0.2,
+    #                                                  normalize=normalize)[1]
+    #
+    #     # rflib.dump(score, os.path.join(res_folder, 'result_keypoints.json'))
+    #
+    #     return score
 if __name__ == '__main__':
     dataset = KeypointNetDataset(data_root = '')

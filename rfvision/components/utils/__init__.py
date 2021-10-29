@@ -12,7 +12,7 @@ from .top_down_utils import (batch_argmax, batch_uv2xyz, heatmap_to_uv, generate
 
 from .dct_utils import (dct1, idct1, dct, idct, dct_2d, idct_2d, dct_3d,
                         idct_3d)
-
+from .ops import resize
 __all__ = [
     'ResLayer', 'MLP',
     'build_linear_layer',
@@ -22,5 +22,6 @@ __all__ = [
     'get_K', 'xyz2uv', 'uv2xyz', 'affine_transform', 'batch_uv2xyz',
     'normalize_point_cloud', 'normalize_quaternion', 'quaternion_to_angle_axis',
     'quaternion_mul', 'quaternion_inv',
-    'dct1', 'idct1', 'dct', 'idct', 'dct_2d', 'idct_2d', 'dct_3d', 'idct_3d'
+    'dct1', 'idct1', 'dct', 'idct', 'dct_2d', 'idct_2d', 'dct_3d', 'idct_3d',
+    'resize'
 ]

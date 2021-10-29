@@ -2,7 +2,6 @@ _base_ = ['../_base_/default_runtime.py']
 # model settings
 model = dict(
     type='USDSegYOLOV3',
-    init_cfg='open-mmlab://darknet53',
     num_bases=32,
     method='cosine',
     bases_path='./robotflow/perception/detector/new_32_1.npy',
@@ -11,6 +10,7 @@ model = dict(
         depth=53,
         out_indices=(3, 4, 5),
         frozen_stages=-1,
+        init_cfg='open-mmlab://darknet53',
     ),
     neck=dict(
         type='YOLOV3Neck',

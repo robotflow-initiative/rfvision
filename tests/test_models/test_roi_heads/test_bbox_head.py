@@ -4,7 +4,7 @@ import pytest
 import torch
 
 from rfvision.core import bbox2roi
-from rfvision.models.roi_heads.bbox_heads import BBoxHead
+from rfvision.components.roi_heads.bbox_heads import BBoxHead
 from .utils import _dummy_bbox_sampling
 
 

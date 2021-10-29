@@ -6,7 +6,7 @@ from .pipelines import Compose
 from .custom3d import Custom3DDataset
 
 @DATASETS.register_module()
-class ShapeNetCoreV2ForSkeletonMerger:
+class ShapeNetCoreV2HDF5(Custom3DDataset):
     def __init__(self,
                  data_root,
                  pipeline,

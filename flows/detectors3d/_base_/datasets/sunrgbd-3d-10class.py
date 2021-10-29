@@ -1,5 +1,5 @@
 dataset_type = 'SUNRGBDDataset'
-data_root = '/hdd0/data/sunrgbd/'
+data_root = 'data/sunrgbd/'
 class_names = ('bed', 'table', 'sofa', 'chair', 'toilet', 'desk', 'dresser',
                'night_stand', 'bookshelf', 'bathtub')
 train_pipeline = [
@@ -20,7 +20,7 @@ train_pipeline = [
         rot_range=[-0.523599, 0.523599],
         scale_ratio_range=[0.85, 1.15],
         shift_height=True),
-    dict(type='IndoorPointSample', num_points=20000),
+    dict(type='PointSample', num_points=20000),
     dict(type='DefaultFormatBundle3D', class_names=class_names),
     dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
 ]
@@ -47,7 +47,7 @@ test_pipeline = [
                 sync_2d=False,
                 flip_ratio_bev_horizontal=0.5,
             ),
-            dict(type='IndoorPointSample', num_points=20000),
+            dict(type='PointSample', num_points=20000),
             dict(
                 type='DefaultFormatBundle3D',
                 class_names=class_names,
@@ -55,10 +55,25 @@ test_pipeline = [
             dict(type='Collect3D', keys=['points'])
         ])
 ]
+# construct a pipeline for data and gt loading in show function
+# please keep its loading function consistent with test_pipeline (e.g. client)
+eval_pipeline = [
+    dict(
+        type='LoadPointsFromFile',
+        coord_type='DEPTH',
+        shift_height=False,
+        load_dim=6,
+        use_dim=[0, 1, 2]),
+    dict(
+        type='DefaultFormatBundle3D',
+        class_names=class_names,
+        with_label=False),
+    dict(type='Collect3D', keys=['points'])
+]
 
 data = dict(
-    samples_per_gpu=16,
-    workers_per_gpu=4,
+    samples_per_gpu=32,
+    workers_per_gpu=0,
     train=dict(
         type='RepeatDataset',
         times=5,
@@ -88,3 +103,5 @@ data = dict(
         classes=class_names,
         test_mode=True,
         box_type_3d='Depth'))
+
+evaluation = dict(pipeline=eval_pipeline)

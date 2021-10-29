@@ -20,7 +20,6 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='RFVision test (and eval) a model')
     parser.add_argument('config', help='test config file path')
-    # tycoer
     parser.add_argument('checkpoint', help='checkpoint file', default='none')
     parser.add_argument(
         '--work-dir',
@@ -88,6 +87,12 @@ def parse_args():
         default='none',
         help='job launcher')
 
+    # parser.add_argument('--gpu-ids',
+    #                     help='ids of gpus to use',
+    #                     type=int,
+    #                     nargs='+',
+    #                     default=[0]
+    #                     )
 
     parser.add_argument('--local_rank', type=int, default=0)
     args = parser.parse_args()
@@ -190,7 +195,7 @@ def main():
         wrap_fp16_model(model)
 
     # tycoer
-    if args.checkpoint != 'none':
+    if args.checkpoint != 'none' and args.checkpoint != 'None' and args.checkpoint != None:
         checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
     else:
         checkpoint = {'state_dict': model.state_dict()}
@@ -202,7 +207,8 @@ def main():
     if 'CLASSES' in checkpoint.get('meta', {}):
         model.CLASSES = checkpoint['meta']['CLASSES']
     else:
-        model.CLASSES = dataset.CLASSES
+        if hasattr(model, 'CLASSES'):
+            model.CLASSES = dataset.CLASSES
 
     if not distributed:
         model = RFDataParallel(model, device_ids=[0])

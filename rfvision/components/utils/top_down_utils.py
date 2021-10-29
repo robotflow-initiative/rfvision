@@ -32,7 +32,7 @@ def heatmap_to_uv(hm, mode='max'):
     Locate single keypoint pixel coordinate uv in heatmap.
 
     Args:
-        hm:  shape (w, h), dim=2
+        hm:  shape (bz, c, w, h), dim=4
         mode: -
 
     Returns: keypoint pixel coordinate uv, shape  (1, 2)
@@ -57,10 +57,10 @@ def heatmap_to_uv(hm, mode='max'):
 
 def generate_heatmap_2d(uv, heatmap_shape, sigma=7):
     '''
-
+    Generate one heatmap in range (0, 1).
     Args:
         uv: single pixel coordinate, shape (1, 2),
-        heatmap_shape: -
+        heatmap_shape: output shape of heatmap, tuple or list, typically: (256, 256)
         sigma:Gaussian sigma
 
     Returns:heatmap
@@ -70,7 +70,7 @@ def generate_heatmap_2d(uv, heatmap_shape, sigma=7):
     hm[uv[1], uv[0]] = 1
     hm = cv2.GaussianBlur(hm, (sigma, sigma), 0)
     hm /= hm.max()  # normalize hm to [0, 1]
-    return hm
+    return hm # outshape
 
 
 def get_K(xyz, uv):
@@ -130,18 +130,18 @@ def uv2xyz(uv, K , depth):
     '''
     assert depth.ndim == 2, f'depth shape should be (n, 1) instead of {depth.shape}'
     assert uv.ndim == 2, f'uv shape should be (n, 2) instead of {uv.shape}'
-    '''
+
     # Another form
     u = uv[:, 0]
     v = uv[:, 1]
     fx,fy=K[0,0],K[1,1]
     cx,cy=K[0,2],K[1,2]
-    x = (u - cx) / fx 
-    y = (v - cy) / fy  
+    x = (u - cx) / fx
+    y = (v - cy) / fy
     xyz = np.hstack((x.reshape(-1, 1) * depth, y.reshape(-1, 1) * depth, depth))
-    '''
-    xy = cv2.undistort(np.float32(uv), np.float32(K), distCoeffs=np.zeros(5))
-    xyz = np.hstack((xy * depth, depth))
+
+    # xy = cv2.undistort(np.float32(uv), np.float32(K), distCoeffs=np.zeros(5))
+    # xyz = np.hstack((xy * depth, depth))
     return xyz
 
 def batch_uv2xyz(uv, K, depth):

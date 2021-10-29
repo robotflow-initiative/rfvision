@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 import torch
 
@@ -13,7 +14,7 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
 
     .. code-block:: none
 
-                z front (yaw=0.5*pi)
+                z front (yaw=-0.5*pi)
                /
               /
              0 ------> x right (yaw=0)
@@ -24,8 +25,11 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
 
     The relative coordinate of bottom center in a CAM box is (0.5, 1.0, 0.5),
     and the yaw is around the y axis, thus the rotation axis=1.
-    The yaw is 0 at the positive direction of x axis, and increases from
+    The yaw is 0 at the positive direction of x axis, and decreases from
     the positive direction of x to the positive direction of z.
+
+    A refactor is ongoing to make the three coordinate systems
+    easier to understand and convert between each other.
 
     Attributes:
         tensor (torch.Tensor): Float matrix of N x box_dim.
@@ -113,7 +117,7 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
                           / |           /  |
             (x0, y0, z0) + ----------- +   + (x1, y1, z1)
                          |  /      .   |  /
-                         | / oriign    | /
+                         | / origin    | /
             (x0, y1, z0) + ----------- + -------> x right
                          |             (x1, y1, z0)
                          |
@@ -166,10 +170,12 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
         return bev_boxes
 
     def rotate(self, angle, points=None):
-        """Rotate boxes with points (optional) with the given angle.
+        """Rotate boxes with points (optional) with the given angle or \
+        rotation matrix.
 
         Args:
-            angle (float, torch.Tensor): Rotation angle.
+            angle (float | torch.Tensor | np.ndarray):
+                Rotation angle or rotation matrix.
             points (torch.Tensor, numpy.ndarray, :obj:`BasePoints`, optional):
                 Points to rotate. Defaults to None.
 
@@ -180,10 +186,20 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
         """
         if not isinstance(angle, torch.Tensor):
             angle = self.tensor.new_tensor(angle)
-        rot_sin = torch.sin(angle)
-        rot_cos = torch.cos(angle)
-        rot_mat_T = self.tensor.new_tensor([[rot_cos, 0, -rot_sin], [0, 1, 0],
-                                            [rot_sin, 0, rot_cos]])
+        assert angle.shape == torch.Size([3, 3]) or angle.numel() == 1, \
+            f'invalid rotation angle shape {angle.shape}'
+
+        if angle.numel() == 1:
+            rot_sin = torch.sin(angle)
+            rot_cos = torch.cos(angle)
+            rot_mat_T = self.tensor.new_tensor([[rot_cos, 0, -rot_sin],
+                                                [0, 1, 0],
+                                                [rot_sin, 0, rot_cos]])
+        else:
+            rot_mat_T = angle
+            rot_sin = rot_mat_T[2, 0]
+            rot_cos = rot_mat_T[0, 0]
+            angle = np.arctan2(rot_sin, rot_cos)
 
         self.tensor[:, :3] = self.tensor[:, :3] @ rot_mat_T
         self.tensor[:, 6] += angle
@@ -292,8 +308,8 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
         """Convert self to ``dst`` mode.
 
         Args:
-            dst (:obj:`BoxMode`): The target Box mode.
-            rt_mat (np.dnarray | torch.Tensor): The rotation and translation
+            dst (:obj:`Box3DMode`): The target Box mode.
+            rt_mat (np.ndarray | torch.Tensor): The rotation and translation
                 matrix between different coordinates. Defaults to None.
                 The conversion from ``src`` coordinates to ``dst`` coordinates
                 usually comes along the change of sensors, e.g., from camera

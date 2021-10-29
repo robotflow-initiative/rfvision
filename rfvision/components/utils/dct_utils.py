@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-# some differences of 'fft' in torch result from torch version (because complex is introduced since version 1.7).
+# Some differences of 'fft' in torch result from torch version (because complex is introduced since version 1.7).
 # https://pytorch.org/docs/1.7.0/generated/torch.rfft.html?highlight=rfft
 # To uniform the output of 'fft' in different torch version, we write following functions.
 

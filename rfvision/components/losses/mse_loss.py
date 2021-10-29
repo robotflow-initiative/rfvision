@@ -4,28 +4,42 @@ import torch.nn.functional as F
 from rfvision.models.builder import LOSSES
 from .utils import weighted_loss
 
-
 @LOSSES.register_module()
-class HeatmapMSELoss(nn.Module):
-    def __init__(self, loss_weight=1.):
-        super().__init__()
-        self.loss_weight = loss_weight
+class JointsMSELoss(nn.Module):
+    """MSE loss for heatmaps.
 
-    def forward(self, hm_pred, hm_gt, hm_weight=None):
-        b, c = hm_pred.shape[:2]
-        hm_pred = hm_pred.reshape(b, c, -1).split(1, 1)
-        hm_gt = hm_gt.reshape(b, c, -1).split(1, 1)
+    Args:
+        use_target_weight (bool): Option to use weighted MSE loss.
+            Different joint types may have different target weights.
+    """
+
+    def __init__(self, use_target_weight=False):
+        super().__init__()
+        self.criterion = nn.MSELoss()
+        self.use_target_weight = use_target_weight
+
+    def forward(self, output, target, target_weight):
+        """Forward function."""
+        batch_size = output.size(0)
+        num_joints = output.size(1)
+
+        heatmaps_pred = output.reshape(
+            (batch_size, num_joints, -1)).split(1, 1)
+        heatmaps_gt = target.reshape((batch_size, num_joints, -1)).split(1, 1)
 
         loss = 0.
-        if hm_weight is not None:
-            hm_pred, hm_gt = hm_pred * hm_weight, hm_gt * hm_weight
-            for i in range(c):
-                loss += F.mse_loss(hm_pred[i], hm_gt[i])
-        else:
-            for i in range(c):
-                loss += F.mse_loss(hm_pred[i], hm_gt[i])
-        return loss / c * self.loss_weight
 
+        for idx in range(num_joints):
+            heatmap_pred = heatmaps_pred[idx].squeeze(1)
+            heatmap_gt = heatmaps_gt[idx].squeeze(1)
+            if self.use_target_weight:
+                loss += self.criterion(
+                    heatmap_pred.mul(target_weight[:, idx]),
+                    heatmap_gt.mul(target_weight[:, idx]))
+            else:
+                loss += self.criterion(heatmap_pred, heatmap_gt)
+
+        return loss / num_joints
 
 @weighted_loss
 def mse_loss(pred, target):
@@ -69,3 +83,4 @@ class MSELoss(nn.Module):
             reduction=self.reduction,
             avg_factor=avg_factor)
         return loss
+

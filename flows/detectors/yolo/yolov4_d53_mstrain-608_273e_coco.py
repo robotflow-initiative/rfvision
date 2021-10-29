@@ -2,7 +2,7 @@ _base_ = '../_base_/default_runtime.py'
 # model settings
 model = dict(
     type='SingleStageDetector',
-    init_cfg='/home/hanyang/weights/yolov4_608.pth',
+    init_cfg='/home/hanyang/weights/yolov4_multisize_mish_leaky.pth',
     backbone=dict(type='CSPDarknet',
                   act_cfg=dict(type='Mish'),),
     neck=dict(type='YOLOV4Neck',
@@ -45,7 +45,7 @@ model = dict(
         nms_pre=1000,
         min_bbox_size=0,
         score_thr=0.05,
-        conf_thr=0.001,
+        conf_thr=0.005,
         nms=dict(type='nms', iou_threshold=0.45),
         max_per_img=100)
     )
@@ -93,7 +93,7 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=16,
-    workers_per_gpu=8,
+    workers_per_gpu=0,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
@@ -122,4 +122,4 @@ lr_config = dict(
 # runtime settings
 total_epochs = 273
 checkpoint_config = dict(interval=100)
-evaluation = dict(interval=1, metric=['bbox'])
+evaluation = dict(interval=100, metric=['bbox'])

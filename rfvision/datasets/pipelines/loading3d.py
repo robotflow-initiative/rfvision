@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import rflib
 import numpy as np
 
@@ -9,7 +10,9 @@ from rfvision.datasets.pipelines import LoadAnnotations, LoadImageFromFile
 @PIPELINES.register_module()
 class LoadMultiViewImageFromFiles(object):
     """Load multi channel images from a list of separate channel files.
+
     Expects results['img_filename'] to be a list of filenames.
+
     Args:
         to_float32 (bool): Whether to convert the img to float32.
             Defaults to False.
@@ -22,11 +25,14 @@ class LoadMultiViewImageFromFiles(object):
 
     def __call__(self, results):
         """Call function to load multi-view image from files.
+
         Args:
             results (dict): Result dict containing multi-view image filenames.
+
         Returns:
             dict: The result dict containing the multi-view image data. \
                 Added keys and values are described below.
+
                 - filename (str): Multi-view image filenames.
                 - img (np.ndarray): Multi-view image arrays.
                 - img_shape (tuple[int]): Shape of multi-view image arrays.
@@ -69,6 +75,7 @@ class LoadMultiViewImageFromFiles(object):
 class LoadImageFromFileMono3D(LoadImageFromFile):
     """Load an image from file in monocular 3D object detection. Compared to 2D
     detection, additional camera parameters need to be loaded.
+
     Args:
         kwargs (dict): Arguments are the same as those in \
             :class:`LoadImageFromFile`.
@@ -76,20 +83,24 @@ class LoadImageFromFileMono3D(LoadImageFromFile):
 
     def __call__(self, results):
         """Call functions to load image and get image meta information.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision.CustomDataset`.
+
         Returns:
             dict: The dict contains loaded image and meta information.
         """
         super().__call__(results)
-        results['cam_intrinsic'] = results['img_info']['cam_intrinsic']
+        results['cam2img'] = results['img_info']['cam_intrinsic']
         return results
 
 
 @PIPELINES.register_module()
 class LoadPointsFromMultiSweeps(object):
     """Load points from multiple sweeps.
+
     This is usually used for nuScenes dataset to utilize previous sweeps.
+
     Args:
         sweeps_num (int): Number of sweeps. Defaults to 10.
         load_dim (int): Dimension number of the loaded points. Defaults to 5.
@@ -125,8 +136,10 @@ class LoadPointsFromMultiSweeps(object):
 
     def _load_points(self, pts_filename):
         """Private function to load point clouds data.
+
         Args:
             pts_filename (str): Filename of point clouds data.
+
         Returns:
             np.ndarray: An array containing point clouds data.
         """
@@ -145,10 +158,12 @@ class LoadPointsFromMultiSweeps(object):
 
     def _remove_close(self, points, radius=1.0):
         """Removes point too close within a certain radius from origin.
+
         Args:
             points (np.ndarray | :obj:`BasePoints`): Sweep points.
             radius (float): Radius below which points are removed.
                 Defaults to 1.0.
+
         Returns:
             np.ndarray: Points after removing.
         """
@@ -165,12 +180,15 @@ class LoadPointsFromMultiSweeps(object):
 
     def __call__(self, results):
         """Call function to load multi-sweep point clouds from files.
+
         Args:
             results (dict): Result dict containing multi-sweep point cloud \
                 filenames.
+
         Returns:
             dict: The result dict containing the multi-sweep points data. \
                 Added key and value are described below.
+
                 - points (np.ndarray | :obj:`BasePoints`): Multi-sweep point \
                     cloud arrays.
         """
@@ -219,8 +237,10 @@ class LoadPointsFromMultiSweeps(object):
 @PIPELINES.register_module()
 class PointSegClassMapping(object):
     """Map original semantic class to valid category ids.
+
     Map valid classes as 0~len(valid_cat_ids)-1 and
     others as len(valid_cat_ids).
+
     Args:
         valid_cat_ids (tuple[int]): A tuple of valid category.
         max_cat_id (int): The max possible cat_id in input segmentation mask.
@@ -243,11 +263,14 @@ class PointSegClassMapping(object):
 
     def __call__(self, results):
         """Call function to map original semantic class to valid category ids.
+
         Args:
             results (dict): Result dict containing point semantic masks.
+
         Returns:
             dict: The result dict containing the mapped category ids. \
                 Updated key and value are described below.
+
                 - pts_semantic_mask (np.ndarray): Mapped semantic masks.
         """
         assert 'pts_semantic_mask' in results
@@ -269,6 +292,7 @@ class PointSegClassMapping(object):
 @PIPELINES.register_module()
 class NormalizePointsColor(object):
     """Normalize color of points.
+
     Args:
         color_mean (list[float]): Mean color of the point cloud.
     """
@@ -278,11 +302,14 @@ class NormalizePointsColor(object):
 
     def __call__(self, results):
         """Call function to normalize color of points.
+
         Args:
             results (dict): Result dict containing point clouds data.
+
         Returns:
             dict: The result dict containing the normalized points. \
                 Updated key and value are described below.
+
                 - points (:obj:`BasePoints`): Points after color normalization.
         """
         points = results['points']
@@ -306,7 +333,9 @@ class NormalizePointsColor(object):
 @PIPELINES.register_module()
 class LoadPointsFromFile(object):
     """Load Points From File.
+
     Load sunrgbd and scannet points from file.
+
     Args:
         coord_type (str): The type of coordinates of points cloud.
             Available options includes:
@@ -348,8 +377,10 @@ class LoadPointsFromFile(object):
 
     def _load_points(self, pts_filename):
         """Private function to load point clouds data.
+
         Args:
             pts_filename (str): Filename of point clouds data.
+
         Returns:
             np.ndarray: An array containing point clouds data.
         """
@@ -369,11 +400,14 @@ class LoadPointsFromFile(object):
 
     def __call__(self, results):
         """Call function to load points data from file.
+
         Args:
             results (dict): Result dict containing point clouds data.
+
         Returns:
             dict: The result dict containing the point clouds data. \
                 Added key and value are described below.
+
                 - points (:obj:`BasePoints`): Point clouds data.
         """
         pts_filename = results['pts_filename']
@@ -422,8 +456,10 @@ class LoadPointsFromFile(object):
 @PIPELINES.register_module()
 class LoadAnnotations3D(LoadAnnotations):
     """Load Annotations3D.
+
     Load instance mask and semantic mask of points and
     encapsulate the items into related fields.
+
     Args:
         with_bbox_3d (bool, optional): Whether to load 3D boxes.
             Defaults to True.
@@ -485,8 +521,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def _load_bboxes_3d(self, results):
         """Private function to load 3D bounding box annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing loaded 3D bounding box annotations.
         """
@@ -496,8 +534,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def _load_bboxes_depth(self, results):
         """Private function to load 2.5D bounding box annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing loaded 2.5D bounding box annotations.
         """
@@ -507,8 +547,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def _load_labels_3d(self, results):
         """Private function to load label annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing loaded label annotations.
         """
@@ -517,8 +559,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def _load_attr_labels(self, results):
         """Private function to load label annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing loaded label annotations.
         """
@@ -527,8 +571,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def _load_masks_3d(self, results):
         """Private function to load 3D mask annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing loaded 3D mask annotations.
         """
@@ -550,8 +596,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def _load_semantic_seg_3d(self, results):
         """Private function to load 3D semantic segmentation annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing the semantic segmentation annotations.
         """
@@ -575,8 +623,10 @@ class LoadAnnotations3D(LoadAnnotations):
 
     def __call__(self, results):
         """Call function to load multiple types annotations.
+
         Args:
-            results (dict): Result dict from :obj:`mmdet3d.CustomDataset`.
+            results (dict): Result dict from :obj:`rfvision3d.CustomDataset`.
+
         Returns:
             dict: The dict containing loaded 3D bounding box, label, mask and
                 semantic segmentation annotations.

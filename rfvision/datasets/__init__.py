@@ -6,17 +6,24 @@ from .dataset_wrappers import (ClassBalancedDataset, ConcatDataset,
 from .samplers import DistributedGroupSampler, DistributedSampler, GroupSampler
 from .utils import (NumClassCheckHook, get_loading_pipeline,
                     replace_ImageToTensor)
-from .ik_dataset import INVKDataset
-from .freihand_dataset import FreiHandDataset
+from .utils3d import (get_loading_pipeline_3d, is_loading_function, extract_result_dict)
+from .ik_dataset import IKDataset
 from .ycb_video import YCBVideoDataset
 from .arti import ArtiImgDataset, ArtiSynDataset, ArtiRealDataset
 from .sunrgbd_dataset import SUNRGBDDataset
+from .shapenet_v2 import ShapeNetCoreV2HDF5
+from .keypointnet import KeypointNetDataset
+from .pose_dataset import FreiHandDataset, DatasetInfo, InterHand3DDataset, Rhd2DDataset
+
 __all__ = [
     'CustomDataset', 'CocoDataset', 'GroupSampler', 'DistributedGroupSampler',
     'DistributedSampler', 'build_dataloader', 'ConcatDataset', 'RepeatDataset',
     'ClassBalancedDataset', 'DATASETS', 'PIPELINES',
     'build_dataset', 'replace_ImageToTensor', 'get_loading_pipeline',
     'NumClassCheckHook',
-    'INVKDataset', 'FreiHandDataset', 'YCBVideoDataset', 'ArtiImgDataset',
-    'ArtiSynDataset', 'ArtiRealDataset', 'SUNRGBDDataset'
+    'IKDataset','YCBVideoDataset', 'ArtiImgDataset',
+    'ArtiSynDataset', 'ArtiRealDataset', 'SUNRGBDDataset', 'ShapeNetCoreV2HDF5',
+    'KeypointNetDataset',
+    'get_loading_pipeline_3d', 'is_loading_function', 'extract_result_dict',
+    'DatasetInfo', 'InterHand3DDataset', 'Rhd2DDataset'
 ]
