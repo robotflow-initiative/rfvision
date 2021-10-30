@@ -12,15 +12,13 @@ from .pointnet2_sa_ssg import PointNet2SASSG
 from .pointnet2_sa_msg import PointNet2SAMSG
 from .skeleton_merger_backbone import PointNet2ForSkeletonMerger
 from .handtailor_backbone import HandTailor3DBackbone, HandTailor2DBackbone, ManoNetBackbone
-from .iknet_backbone import IKNetBackbone
 from .base_pointnet import BasePointNet
-
+from .tcn import TCN
 __all__ = [
     'ResNet', 'ResNetV1d', 'ResNeXt',
     'HourglassNet','Darknet',
     'CSPDarknet', 'YOLOV3TinyBackbone', 'YOLOV4TinyBackbone',
     'DenseFusionResNet', 'PointNet2ForArticulation', 'PointNet2SASSG',
     'PointNet2SAMSG', 'YOLOV4LargeBackbone', 'PointNet2ForSkeletonMerger',
-    'BasePointNet', 'HandTailor3DBackbone', 'HandTailor2DBackbone',
-    'IKNetBackbone',
+    'BasePointNet', 'HandTailor3DBackbone', 'HandTailor2DBackbone', 'TCN'
 ]

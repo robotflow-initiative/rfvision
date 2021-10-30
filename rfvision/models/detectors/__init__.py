@@ -6,10 +6,10 @@ from .mask_rcnn import MaskRCNN
 from .single_stage import SingleStageDetector
 from .two_stage import TwoStageDetector
 from .yolo import YOLOV3
-from .solo import SOLOV2
+from .solo import SOLOv2
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 
     'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade', 'FCOS',
-    'YOLOV3', 'SOLOV2'
+    'YOLOV3', 'SOLOv2'
 ]

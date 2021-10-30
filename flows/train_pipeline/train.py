@@ -166,14 +166,21 @@ def main():
         val_dataset = copy.deepcopy(cfg.data.val)
         val_dataset.pipeline = cfg.data.train.pipeline
         datasets.append(build_dataset(val_dataset))
-    if cfg.checkpoint_config is not None:
-        # save rfvision version, config file content and class names in
-        # checkpoints as meta data
+
+
+    if hasattr(datasets[0], 'CLASSES'):
+        if cfg.checkpoint_config is not None:
+            # save rfvision version, config file content and class names in
+            # checkpoints as meta data
+            cfg.checkpoint_config.meta = dict(
+                rfvision_version=__version__ + get_git_hash()[:7],
+                CLASSES=datasets[0].CLASSES)
+        # add an attribute for visualization convenience
+        model.CLASSES = datasets[0].CLASSES
+    else:
         cfg.checkpoint_config.meta = dict(
-            rfvision_version=__version__ + get_git_hash()[:7],
-            CLASSES=datasets[0].CLASSES)
-    # add an attribute for visualization convenience
-    model.CLASSES = datasets[0].CLASSES
+            rfvision_version=__version__ + get_git_hash()[:7])
+
     train_detector(
         model,
         datasets,

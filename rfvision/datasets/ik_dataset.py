@@ -1,10 +1,15 @@
 import os
 import numpy as np
+from rfvision.datasets import DATASETS
+from torch.utils.data import Dataset
+
+
+import os
+import numpy as np
 import torch
 import rflib
 from rfvision.datasets import DATASETS
 from rfvision.datasets.custom3d import Custom3DDataset
-from rfvision.components import IKNetBackbone
 
 SNAP_PARENT = [
     0, # 0's parent
@@ -32,12 +37,15 @@ SNAP_PARENT = [
 
 
 @DATASETS.register_module()
-class INVKDataset(Custom3DDataset):
+class IKDataset(Custom3DDataset):
     CLASSES = None
     def __init__(self,
                  data_root='/hddisk1/data/IKdataset',
-                 data_source = ["freihand_gt","GenData"],
-                 split='train',
+                 data_source = [
+                     "freihand_gt",
+                     "GenData"
+                 ],
+                 split='all',
                  shuffle=False,
                  **kwargs):
         assert split in ('train', 'test', 'val', 'all')
@@ -86,11 +94,13 @@ class INVKDataset(Custom3DDataset):
 
     def __getitem__(self, index):
         joints_xyz = self.joints_xyz[index]
+        joints_xyz = normalize_point_cloud(joints_xyz)[0]
         quat = self.quats[index]
 
         results = {'joints_xyz': joints_xyz,
                    'quat': quat}
-        results.update(self._preprocess_joint(joints_xyz))  # add preprocess info to results
+
+        # results.update(self._preprocess_joint(joints_xyz))  # add preprocess info to results
         return results
 
     def _preprocess_joint(self, joints_xyz):
@@ -105,26 +115,100 @@ class INVKDataset(Custom3DDataset):
                    'kin_len': kin_len}
         return results
 
-    def evaluate(self,
-                 results,
-                 metric='mean_loss',
-                 logger=None,
-                 ):
-        loss_quat_l2 = 0
-        loss_quat_cos = 0
-        for i in range(len(self)):
-            pred = results[i]
-            gt = self.__getitem__(i)
-            pred_quat = pred['quat'].squeeze(0).cuda()
-            gt_quat = torch.tensor(gt['quat']).cuda()
-            losses = IKNetBackbone.loss_ik(pred_quat, gt_quat)
-            loss_quat_l2 += float(losses['loss_quat_l2'])
-            loss_quat_cos += float(losses['loss_quat_cos'])
 
-        eval_dict = {'mean_loss_quat_l2': loss_quat_l2 / len(self),
-                     'mean_loss_quat_cos': loss_quat_cos / len(self)}
-        return eval_dict
+def normalize_point_cloud(pc):
+    centroid = pc[9]
+    pc = pc - centroid
+    m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
+    pc_normalized = pc / m
+    return pc_normalized, centroid, m
+
+
+# @DATASETS.register_module()
+# class IKDataset(Dataset):
+#     '''
+#     We use manotorch(https://github.com/lixiny/manotorch) to generate the INVKDataset
+#     according to following joint sequence.
+#         0: 'wrist',
+#         1: 'thumb1',
+#         2: 'thumb2',
+#         3: 'thumb3',
+#         4: 'thumb4',
+#         5: 'forefinger1',
+#         6: 'forefinger2',
+#         7: 'forefinger3',
+#         8: 'forefinger4',
+#         9: 'middle_finger1',
+#         10: 'middle_finger2',
+#         11: 'middle_finger3',
+#         12: 'middle_finger4',
+#         13: 'ring_finger1',
+#         14: 'ring_finger2',
+#         15: 'ring_finger3',
+#         16: 'ring_finger4',
+#         17: 'pinky_finger1',
+#         18: 'pinky_finger2',
+#         19: 'pinky_finger3',
+#         20: 'pinky_finger4'
+#
+#     INVKDataset includes two metas: joints_xyz (bz, 21, 3) and full_posesernions (bz, 48)
+#     Note: if you download our dataset (without any processing such as normalization and root relative), bz = 1000000. For more details: https://github.com/lixiny/manotorch
+#     '''
+#
+#     def __init__(self,
+#                  data_root='/hddisk1/data/IKdataset',
+#                  split='train',
+#                  shuffle=False,
+#                  **kwargs):
+#
+#         assert split in ('train', 'test', 'val', 'all')
+#         joints_xyz_path = os.path.join(data_root, 'joints_xyz.npy')
+#         full_poses_path = os.path.join(data_root, 'full_poses.npy')
+#         joints_xyz = np.load(joints_xyz_path, allow_pickle=True)
+#         full_poses = np.load(full_poses_path)
+#
+#         # split dataset
+#         split_ratio = 0.8
+#         if shuffle == True:
+#             all_idx = np.random.randint(0, len(joints_xyz), len(joints_xyz))
+#         else:
+#             all_idx = list(range(len(joints_xyz)))
+#
+#         train_length = int(split_ratio * len(joints_xyz))
+#         train_idx = all_idx[:train_length]
+#         test_idx = all_idx[train_length:]
+#
+#         if split == 'train':
+#             self.joints_xyz = joints_xyz[train_idx]
+#             self.full_poses = full_poses[train_idx]
+#         elif split == 'test' or split =='val':
+#             self.joints_xyz = joints_xyz[test_idx]
+#             self.full_poses = full_poses[test_idx]
+#         elif split == 'all':
+#             self.joints_xyz = joints_xyz
+#             self.full_poses = full_poses
+#
+#         self._processing()
+#
+#     def _processing(self):
+#         self.full_poses = self.full_poses.reshape(-1, 16, 3)
+#
+#     def __len__(self):
+#         return len(self.joints_xyz)
+#
+#     def __getitem__(self, index):
+#         joints_xyz = self.joints_xyz[index]
+#         joints_xyz = normalize_point_cloud(joints_xyz)[0]
+#         full_poses = self.full_poses[index]
+#         results = {'joints_xyz': joints_xyz,
+#                    'full_poses': full_poses}
+#         return results
+
 
 if __name__ == '__main__':
-    dataset = INVKDataset()
-    sample = dataset[0]
+    pass
+    # dataset = INVKDataset()
+    # sample = dataset[0]
+
+
+

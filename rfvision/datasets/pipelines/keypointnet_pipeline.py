@@ -1,5 +1,6 @@
 from rfvision.datasets import PIPELINES
 from rfvision.components.utils import normalize_point_cloud
+
 @PIPELINES.register_module()
 class NormalizePoints:
     def __call__(self, results):

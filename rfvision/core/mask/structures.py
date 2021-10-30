@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-
 import cv2
 import rflib
 import numpy as np

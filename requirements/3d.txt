@@ -2,4 +2,4 @@ open3d
 trimesh
 h5py
 numba
-opencv-contrib-python
+opencv-python

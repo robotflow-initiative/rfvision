@@ -1,7 +1,7 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import torch
 
-from rfvision.core.bbox3d import bbox3d2result
-from rfvision.core.post_processing3d import merge_aug_bboxes_3d
+from rfvision.core import bbox3d2result, merge_aug_bboxes_3d
 from rfvision.models.builder import DETECTORS
 from .single_stage import SingleStage3DDetector
 
@@ -15,35 +15,15 @@ class VoteNet(SingleStage3DDetector):
                  bbox_head=None,
                  train_cfg=None,
                  test_cfg=None,
-                 init_cfg=None):
+                 init_cfg=None,
+                 pretrained=None):
         super(VoteNet, self).__init__(
             backbone=backbone,
             bbox_head=bbox_head,
             train_cfg=train_cfg,
             test_cfg=test_cfg,
-            init_cfg=init_cfg)
-
-    def extract_feat(self, points, img_metas=None):
-        """Directly extract features from the backbone+neck.
-
-        Args:
-            points (torch.Tensor): Input points.
-        """
-        x = self.backbone(points)
-        if self.with_neck:
-            x = self.neck(x)
-
-        seed_points = x['fp_xyz'][-1]
-        seed_features = x['fp_features'][-1]
-        seed_indices = x['fp_indices'][-1]
-
-        feat_dict = {
-            'seed_points': seed_points,
-            'seed_features': seed_features,
-            'seed_indices': seed_indices
-        }
-
-        return feat_dict
+            init_cfg=None,
+            pretrained=pretrained)
 
     def forward_train(self,
                       points,

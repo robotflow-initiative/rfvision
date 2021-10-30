@@ -1,11 +1,11 @@
 import rflib
 import torch
 
-from rfvision.models.roi_heads.mask_heads import FCNMaskHead, MaskIoUHead
-from .utils import _dummy_bbox_sampling
+from rfvision.components.roi_heads.mask_heads import FCNMaskHead, MaskRCNNDCTHead
+from utils import _dummy_bbox_sampling
 
 
-def test_mask_head_loss():
+def test_FCNMaskHead_loss():
     """Test mask head loss when mask target is empty."""
     self = FCNMaskHead(
         num_convs=1,
@@ -46,24 +46,18 @@ def test_mask_head_loss():
 
     onegt_mask_loss = sum(loss_mask['loss_mask'])
     assert onegt_mask_loss.item() > 0, 'mask loss should be non-zero'
+    return onegt_mask_loss
 
-    # test mask_iou_head
-    mask_iou_head = MaskIoUHead(
-        num_convs=1,
-        num_fcs=1,
-        roi_feat_size=6,
-        in_channels=8,
-        conv_out_channels=8,
-        fc_out_channels=8,
-        num_classes=8)
+if __name__ == '__main__':
+    n = 13
+    # test model
+    m = MaskRCNNDCTHead()
+    t = torch.rand(n, 256, 14, 14)
+    res_head = m(t)  # shape (13, 300)
 
-    pos_mask_pred = mask_pred[range(mask_pred.size(0)), pos_labels]
-    mask_iou_pred = mask_iou_head(dummy_feats, pos_mask_pred)
-    pos_mask_iou_pred = mask_iou_pred[range(mask_iou_pred.size(0)), pos_labels]
+    # test loss
 
-    mask_iou_targets = mask_iou_head.get_targets(sampling_results, gt_masks,
-                                                 pos_mask_pred, mask_targets,
-                                                 train_cfg)
-    loss_mask_iou = mask_iou_head.loss(pos_mask_iou_pred, mask_iou_targets)
-    onegt_mask_iou_loss = loss_mask_iou['loss_mask_iou'].sum()
-    assert onegt_mask_iou_loss.item() >= 0
+    mask_pred = res_head
+    mask_target = torch.rand(n, 128, 128)
+    labels = torch.randint(low=0, high=80, size=(n, 1))
+    loss = m.loss(mask_pred, mask_target, labels)

@@ -2,7 +2,7 @@ _base_ = '../_base_/default_runtime.py'
 # model settings
 model = dict(
     type='SingleStageDetector',
-    init_cfg='weights/yolov4_tiny.pth',
+    init_cfg='/home/hanyang/weights/yolov4_tiny.pth',
     backbone=dict(type='YOLOV4TinyBackbone'),
     neck=None,
     bbox_head=dict(
@@ -32,19 +32,19 @@ model = dict(
             use_sigmoid=True,
             loss_weight=2.0,
             reduction='sum'),
-        loss_wh=dict(type='MSELoss', loss_weight=2.0, reduction='sum')))
+        loss_wh=dict(type='MSELoss', loss_weight=2.0, reduction='sum')),
+    train_cfg = dict(
+        assigner=dict(
+            type='GridAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0)),
+    test_cfg = dict(
+        nms_pre=1000,
+        min_bbox_size=0,
+        score_thr=0.05,
+        conf_thr=0.005,
+        nms=dict(type='nms', iou_threshold=0.45),
+        max_per_img=100)
+        )
 
-# training and testing settings
-train_cfg = dict(
-    assigner=dict(
-        type='GridAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0))
-test_cfg = dict(
-    nms_pre=1000,
-    min_bbox_size=0,
-    score_thr=0.05,
-    conf_thr=0.005,
-    nms=dict(type='nms', iou_threshold=0.45),
-    max_per_img=100)
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -86,11 +86,11 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=64,
-    workers_per_gpu=8,
+    workers_per_gpu=32,
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/instances_val2017.json',
-        img_prefix=data_root + 'val2017/',
+        ann_file=data_root + 'annotations/instances_train2017.json',
+        img_prefix=data_root + 'train2017/',
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,

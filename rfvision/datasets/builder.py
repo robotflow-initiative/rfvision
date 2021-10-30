@@ -8,7 +8,6 @@ from rflib.parallel import collate
 from rflib.runner import get_dist_info
 from rflib.utils import Registry, build_from_cfg
 from torch.utils.data import DataLoader
-
 from .samplers import DistributedGroupSampler, DistributedSampler, GroupSampler
 
 if platform.system() != 'Windows':
@@ -104,8 +103,10 @@ def build_dataloader(dataset,
     rank, world_size = get_dist_info()
     if dist:
         # DistributedGroupSampler will definitely shuffle the data to satisfy
-        # that images on each GPU are in the same group
-        if shuffle:
+        # that images on each GPU are in the same group\
+        # tycoer
+        # if shuffle:
+        if shuffle and hasattr(dataset, 'flag'):
             sampler = DistributedGroupSampler(
                 dataset, samples_per_gpu, world_size, rank, seed=seed)
         else:
@@ -114,7 +115,9 @@ def build_dataloader(dataset,
         batch_size = samples_per_gpu
         num_workers = workers_per_gpu
     else:
-        sampler = GroupSampler(dataset, samples_per_gpu) if shuffle else None
+        # tycoer
+        # sampler = GroupSampler(dataset, samples_per_gpu) if shuffle else None
+        sampler = GroupSampler(dataset, samples_per_gpu) if shuffle and hasattr(dataset, 'flag') else None
         batch_size = num_gpus * samples_per_gpu
         num_workers = num_gpus * workers_per_gpu
 

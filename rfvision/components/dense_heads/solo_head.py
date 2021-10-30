@@ -1,69 +1,27 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy import ndimage
 from rflib import imrescale
 from rflib.runner import BaseModule
-from rflib.cnn import normal_init, bias_init_with_prob
-from rfvision.components.losses import FocalLoss
-from rfvision.core import multi_apply
+from rflib.cnn import normal_init, bias_init_with_prob, ConvModule
+from rfvision.core import multi_apply, matrix_nms
 from rfvision.models.builder import HEADS
 import torch
+from rfvision.models.builder import build_loss
 
 
 INF = 1e8
 
+def center_of_mass(bitmasks):
+    _, h, w = bitmasks.size()
+    ys = torch.arange(0, h, dtype=torch.float32, device=bitmasks.device)
+    xs = torch.arange(0, w, dtype=torch.float32, device=bitmasks.device)
 
-def matrix_nms(seg_masks, cate_labels, cate_scores, kernel='gaussian', sigma=2.0, sum_masks=None):
-    """Matrix NMS for multi-class masks.
-
-    Args:
-        seg_masks (Tensor): shape (n, h, w)
-        cate_labels (Tensor): shape (n), mask labels in descending order
-        cate_scores (Tensor): shape (n), mask scores in descending order
-        kernel (str):  'linear' or 'gauss'
-        sigma (float): std in gaussian method
-        sum_masks (Tensor): The sum of seg_masks
-
-    Returns:
-        Tensor: cate_scores_update, tensors of shape (n)
-    """
-    n_samples = len(cate_labels)
-    if n_samples == 0:
-        return []
-    if sum_masks is None:
-        sum_masks = seg_masks.sum((1, 2)).float()
-    seg_masks = seg_masks.reshape(n_samples, -1).float()
-    # inter.
-    inter_matrix = torch.mm(seg_masks, seg_masks.transpose(1, 0))
-    # union.
-    sum_masks_x = sum_masks.expand(n_samples, n_samples)
-    # iou.
-    iou_matrix = (inter_matrix / (sum_masks_x + sum_masks_x.transpose(1, 0) - inter_matrix)).triu(diagonal=1)
-    # label_specific matrix.
-    cate_labels_x = cate_labels.expand(n_samples, n_samples)
-    label_matrix = (cate_labels_x == cate_labels_x.transpose(1, 0)).float().triu(diagonal=1)
-
-    # IoU compensation
-    compensate_iou, _ = (iou_matrix * label_matrix).max(0)
-    compensate_iou = compensate_iou.expand(n_samples, n_samples).transpose(1, 0)
-
-    # IoU decay
-    decay_iou = iou_matrix * label_matrix
-
-    # matrix nms
-    if kernel == 'gaussian':
-        decay_matrix = torch.exp(-1 * sigma * (decay_iou ** 2))
-        compensate_matrix = torch.exp(-1 * sigma * (compensate_iou ** 2))
-        decay_coefficient, _ = (decay_matrix / compensate_matrix).min(0)
-    elif kernel == 'linear':
-        decay_matrix = (1-decay_iou)/(1-compensate_iou)
-        decay_coefficient, _ = decay_matrix.min(0)
-    else:
-        raise NotImplementedError
-
-    # update the score.
-    cate_scores_update = cate_scores * decay_coefficient
-    return cate_scores_update
+    m00 = bitmasks.sum(dim=-1).sum(dim=-1).clamp(min=1e-6)
+    m10 = (bitmasks * xs).sum(dim=-1).sum(dim=-1)
+    m01 = (bitmasks * ys[:, None]).sum(dim=-1).sum(dim=-1)
+    center_x = m10 / m00
+    center_y = m01 / m00
+    return center_x, center_y
 
 
 def points_nms(heat, kernel=2):
@@ -77,6 +35,7 @@ def points_nms(heat, kernel=2):
 def dice_loss(input, target):
     input = input.contiguous().view(input.size()[0], -1)
     target = target.contiguous().view(target.size()[0], -1).float()
+
     a = torch.sum(input * target, 1)
     b = torch.sum(input * input, 1) + 0.001
     c = torch.sum(target * target, 1) + 0.001
@@ -86,40 +45,48 @@ def dice_loss(input, target):
 
 @HEADS.register_module()
 class SOLOv2Head(BaseModule):
+    '''
+    This implementation is modified from https://github.com/WXinlong/SOLO
+    (Only has slight modifications to fit the new attributes of rfvision)
+    '''
     def __init__(self,
-                 num_classes,  # 81 coco datashet
-                 in_channels,  # 256 fpn outputs
-                 seg_feat_channels=256,  # seg feature channels
-                 stacked_convs=4,  # solov2 light set 2
-                 strides=(4, 8, 16, 32, 64),  # [8, 8, 16, 32, 32],
+                 num_classes,
+                 in_channels,
+                 seg_feat_channels=256,
+                 stacked_convs=4,
+                 strides=(4, 8, 16, 32, 64),
                  base_edge_list=(16, 32, 64, 128, 256),
                  scale_ranges=((8, 32), (16, 64), (32, 128), (64, 256), (128, 512)),
                  sigma=0.2,
-                 num_grids=None,  # [40, 36, 24, 16, 12],
-                 ins_out_channels=64,  # 128
+                 num_grids=None,
+                 ins_out_channels=64,
+                 loss_ins=None,
+                 loss_cate=None,
+                 conv_cfg=None,
                  norm_cfg=None,
+                 use_dcn_in_tower=False,
+                 type_dcn=None,
                  init_cfg=None):
-
-        super(SOLOv2Head, self).__init__(init_cfg)
+        super(SOLOv2Head, self).__init__(init_cfg=init_cfg)
+        self.num_classes = num_classes
         self.seg_num_grids = num_grids
-        self.cate_out_channels = num_classes
+        self.cate_out_channels = self.num_classes - 1
         self.ins_out_channels = ins_out_channels
         self.in_channels = in_channels
         self.seg_feat_channels = seg_feat_channels
         self.stacked_convs = stacked_convs
         self.strides = strides
         self.sigma = sigma
-        self.stacked_convs = stacked_convs  # 2
+        self.stacked_convs = stacked_convs
         self.kernel_out_channels = self.ins_out_channels * 1 * 1
         self.base_edge_list = base_edge_list
         self.scale_ranges = scale_ranges
-
-        self.loss_cate = FocalLoss(use_sigmoid=True, gamma=2.0,
-                                   alpha=0.25,
-                                   loss_weight=1.0)  # build_loss Focal_loss
-
-        self.ins_loss_weight = 3.0  # loss_ins['loss_weight']  #3.0
+        self.loss_cate = build_loss(loss_cate)
+        self.ins_loss_weight = loss_ins['loss_weight']
+        self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
+        self.use_dcn_in_tower = use_dcn_in_tower
+        self.type_dcn = type_dcn
         self._init_layers()
 
     def _init_layers(self):
@@ -127,38 +94,34 @@ class SOLOv2Head(BaseModule):
         self.cate_convs = nn.ModuleList()
         self.kernel_convs = nn.ModuleList()
         for i in range(self.stacked_convs):
-            # 第0层加上位置信息，x,y两个通道，cat到卷积输出上
+            if self.use_dcn_in_tower:
+                cfg_conv = dict(type=self.type_dcn)
+            else:
+                cfg_conv = self.conv_cfg
+
             chn = self.in_channels + 2 if i == 0 else self.seg_feat_channels
-            self.kernel_convs.append(nn.Sequential(
-                nn.Conv2d(
+            self.kernel_convs.append(
+                ConvModule(
                     chn,
                     self.seg_feat_channels,
                     3,
                     stride=1,
                     padding=1,
-                    bias=norm_cfg is None),
-
-                nn.GroupNorm(num_channels=self.seg_feat_channels,
-                             num_groups=32),
-
-                nn.ReLU(inplace=True)
-            ))
+                    conv_cfg=cfg_conv,
+                    norm_cfg=norm_cfg,
+                    bias=norm_cfg is None))
 
             chn = self.in_channels if i == 0 else self.seg_feat_channels
-            self.cate_convs.append(nn.Sequential(
-                nn.Conv2d(
+            self.cate_convs.append(
+                ConvModule(
                     chn,
                     self.seg_feat_channels,
                     3,
                     stride=1,
                     padding=1,
-                    bias=norm_cfg is None),
-
-                nn.GroupNorm(num_channels=self.seg_feat_channels,
-                             num_groups=32),
-
-                nn.ReLU(inplace=True)
-            ))
+                    conv_cfg=cfg_conv,
+                    norm_cfg=norm_cfg,
+                    bias=norm_cfg is None))
 
         self.solo_cate = nn.Conv2d(
             self.seg_feat_channels, self.cate_out_channels, 3, padding=1)
@@ -167,7 +130,10 @@ class SOLOv2Head(BaseModule):
             self.seg_feat_channels, self.kernel_out_channels, 3, padding=1)
 
     def init_weights(self):
-        super().init_weights()
+        for m in self.cate_convs:
+            normal_init(m.conv, std=0.01)
+        for m in self.kernel_convs:
+            normal_init(m.conv, std=0.01)
         bias_cate = bias_init_with_prob(0.01)
         normal_init(self.solo_cate, std=0.01, bias=bias_cate)
         normal_init(self.solo_kernel, std=0.01)
@@ -181,16 +147,14 @@ class SOLOv2Head(BaseModule):
                                              eval=eval, upsampled_size=upsampled_size)
         return cate_pred, kernel_pred
 
-
     def split_feats(self, feats):
-        return (
-        F.interpolate(feats[0], scale_factor=0.5, mode='bilinear', align_corners=False, recompute_scale_factor=True),
-        feats[1],
-        feats[2],
-        feats[3],
-        F.interpolate(feats[4], size=feats[3].shape[-2:], mode='bilinear', align_corners=False))
+        return (F.interpolate(feats[0], scale_factor=0.5, mode='bilinear'),
+                feats[1],
+                feats[2],
+                feats[3],
+                F.interpolate(feats[4], size=feats[3].shape[-2:], mode='bilinear'))
 
-    def forward_single(self, x, idx, eval=False,  upsampled_size=None):
+    def forward_single(self, x, idx, eval=False, upsampled_size=None):
         ins_kernel_feat = x
         # ins branch
         # concat coord
@@ -205,7 +169,7 @@ class SOLOv2Head(BaseModule):
         # kernel branch
         kernel_feat = ins_kernel_feat
         seg_num_grid = self.seg_num_grids[idx]
-        kernel_feat = F.interpolate(kernel_feat, size=seg_num_grid, mode='bilinear', align_corners=False)
+        kernel_feat = F.interpolate(kernel_feat, size=seg_num_grid, mode='bilinear')
 
         cate_feat = kernel_feat[:, :-2, :, :]
 
@@ -232,9 +196,8 @@ class SOLOv2Head(BaseModule):
              gt_label_list,
              gt_mask_list,
              img_metas,
-             cfg=None,
+             cfg,
              gt_bboxes_ignore=None):
-
         mask_feat_size = ins_pred.size()[-2:]
         ins_label_list, cate_label_list, ins_ind_label_list, grid_order_list = multi_apply(
             self.solov2_target_single,
@@ -306,8 +269,11 @@ class SOLOv2Head(BaseModule):
             for cate_pred in cate_preds
         ]
         flatten_cate_preds = torch.cat(cate_preds)
+
         loss_cate = self.loss_cate(flatten_cate_preds, flatten_cate_labels, avg_factor=num_ins + 1)
-        return dict(loss_ins=loss_ins, loss_cate=loss_cate)
+        return dict(
+            loss_ins=loss_ins,
+            loss_cate=loss_cate)
 
     def solov2_target_single(self,
                              gt_bboxes_raw,
@@ -350,13 +316,19 @@ class SOLOv2Head(BaseModule):
             half_ws = 0.5 * (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * self.sigma
             half_hs = 0.5 * (gt_bboxes[:, 3] - gt_bboxes[:, 1]) * self.sigma
 
+            # mass center
+            gt_masks_pt = gt_masks.to_tensor(device=device, dtype=torch.float32)
+            center_ws, center_hs = center_of_mass(gt_masks_pt)
+            valid_mask_flags = gt_masks_pt.sum(dim=-1).sum(dim=-1) > 0
+
             output_stride = 4
-            for seg_mask, gt_label, half_h, half_w in zip(gt_masks, gt_labels, half_hs, half_ws):
-                if seg_mask.sum() == 0:
+            for seg_mask, gt_label, half_h, half_w, center_h, center_w, valid_mask_flag in zip(gt_masks, gt_labels,
+                                                                                               half_hs, half_ws,
+                                                                                               center_hs, center_ws,
+                                                                                               valid_mask_flags):
+                if not valid_mask_flag:
                     continue
-                # mass center
                 upsampled_size = (mask_feat_size[0] * 4, mask_feat_size[1] * 4)
-                center_h, center_w = ndimage.measurements.center_of_mass(seg_mask)
                 coord_w = int((center_w / upsampled_size[1]) // (1. / num_grid))
                 coord_h = int((center_h / upsampled_size[0]) // (1. / num_grid))
 
@@ -373,7 +345,7 @@ class SOLOv2Head(BaseModule):
 
                 cate_label[top:(down + 1), left:(right + 1)] = gt_label
                 seg_mask = imrescale(seg_mask, scale=1. / output_stride)
-                seg_mask = torch.Tensor(seg_mask)
+                seg_mask = torch.from_numpy(seg_mask).to(device=device)
                 for i in range(top, down + 1):
                     for j in range(left, right + 1):
                         label = int(i * num_grid + j)
@@ -384,8 +356,10 @@ class SOLOv2Head(BaseModule):
                         ins_label.append(cur_ins_label)
                         ins_ind_label[label] = True
                         grid_order.append(label)
-            ins_label = torch.stack(ins_label, 0)
-
+            if len(ins_label) == 0:
+                ins_label = torch.zeros([0, mask_feat_size[0], mask_feat_size[1]], dtype=torch.uint8, device=device)
+            else:
+                ins_label = torch.stack(ins_label, 0)
             ins_label_list.append(ins_label)
             cate_label_list.append(cate_label)
             ins_ind_label_list.append(ins_ind_label)
@@ -436,7 +410,7 @@ class SOLOv2Head(BaseModule):
         upsampled_size_out = (featmap_size[0] * 4, featmap_size[1] * 4)
 
         # process.
-        inds = (cate_preds > cfg['score_thr'])
+        inds = (cate_preds > cfg.score_thr)
         cate_scores = cate_preds[inds]
         if len(cate_scores) == 0:
             return None
@@ -453,7 +427,7 @@ class SOLOv2Head(BaseModule):
         n_stage = len(self.seg_num_grids)
         strides[:size_trans[0]] *= self.strides[0]
         for ind_ in range(1, n_stage):
-            strides[size_trans[ind_-1]:size_trans[ind_]] *= self.strides[ind_]
+            strides[size_trans[ind_ - 1]:size_trans[ind_]] *= self.strides[ind_]
         strides = strides[inds[:, 0]]
 
         # mask encoding.
@@ -461,7 +435,7 @@ class SOLOv2Head(BaseModule):
         kernel_preds = kernel_preds.view(I, N, 1, 1)
         seg_preds = F.conv2d(seg_preds, kernel_preds, stride=1).squeeze(0).sigmoid()
         # mask.
-        seg_masks = seg_preds > cfg['mask_thr']
+        seg_masks = seg_preds > cfg.mask_thr
         sum_masks = seg_masks.sum((1, 2)).float()
 
         # filter.
@@ -475,14 +449,14 @@ class SOLOv2Head(BaseModule):
         cate_scores = cate_scores[keep]
         cate_labels = cate_labels[keep]
 
-        # mask scoring.
+        # maskness.
         seg_scores = (seg_preds * seg_masks.float()).sum((1, 2)) / sum_masks
         cate_scores *= seg_scores
 
         # sort and keep top nms_pre
         sort_inds = torch.argsort(cate_scores, descending=True)
-        if len(sort_inds) > cfg['nms_pre']:
-            sort_inds = sort_inds[:cfg['nms_pre']]
+        if len(sort_inds) > cfg.nms_pre:
+            sort_inds = sort_inds[:cfg.nms_pre]
         seg_masks = seg_masks[sort_inds, :, :]
         seg_preds = seg_preds[sort_inds, :, :]
         sum_masks = sum_masks[sort_inds]
@@ -491,10 +465,10 @@ class SOLOv2Head(BaseModule):
 
         # Matrix NMS
         cate_scores = matrix_nms(seg_masks, cate_labels, cate_scores,
-                                    kernel=cfg['kernel'],sigma=cfg['sigma'], sum_masks=sum_masks)
+                                 kernel=cfg.kernel, sigma=cfg.sigma, sum_masks=sum_masks)
 
         # filter.
-        keep = cate_scores >= cfg['update_thr']
+        keep = cate_scores >= cfg.update_thr
         if keep.sum() == 0:
             return None
         seg_preds = seg_preds[keep, :, :]
@@ -503,32 +477,32 @@ class SOLOv2Head(BaseModule):
 
         # sort and keep top_k
         sort_inds = torch.argsort(cate_scores, descending=True)
-        if len(sort_inds) > cfg['max_per_img']:
-            sort_inds = sort_inds[:cfg['max_per_img']]
+        if len(sort_inds) > cfg.max_per_img:
+            sort_inds = sort_inds[:cfg.max_per_img]
         seg_preds = seg_preds[sort_inds, :, :]
         cate_scores = cate_scores[sort_inds]
         cate_labels = cate_labels[sort_inds]
 
         seg_preds = F.interpolate(seg_preds.unsqueeze(0),
-                                    size=upsampled_size_out,
-                                    mode='bilinear', align_corners=False)[:, :, :h, :w]
+                                  size=upsampled_size_out,
+                                  mode='bilinear')[:, :, :h, :w]
         seg_masks = F.interpolate(seg_preds,
-                               size=ori_shape[:2],
-                               mode='bilinear',
-                               align_corners=False).squeeze(0)
-        seg_masks = seg_masks > cfg['mask_thr']
+                                  size=ori_shape[:2],
+                                  mode='bilinear').squeeze(0)
+        seg_masks = seg_masks > cfg.mask_thr
         return seg_masks, cate_labels, cate_scores
 
 
 @HEADS.register_module()
 class MaskFeatHead(nn.Module):
     def __init__(self,
-                 in_channels,  # 256
-                 out_channels,  # 128
-                 start_level,  # 0
-                 end_level,  # 3
-                 conv_cfg=None,  # None
-                 norm_cfg=None):  # dict(type='GN', num_groups=32, requires_grad=True)),
+                 in_channels,
+                 out_channels,
+                 start_level,
+                 end_level,
+                 num_classes,
+                 conv_cfg=None,
+                 norm_cfg=None):
         super(MaskFeatHead, self).__init__()
 
         self.in_channels = in_channels
@@ -536,6 +510,7 @@ class MaskFeatHead(nn.Module):
         self.start_level = start_level
         self.end_level = end_level
         assert start_level >= 0 and end_level >= start_level
+        self.num_classes = num_classes
         self.conv_cfg = conv_cfg
         self.norm_cfg = norm_cfg
 
@@ -543,19 +518,14 @@ class MaskFeatHead(nn.Module):
         for i in range(self.start_level, self.end_level + 1):
             convs_per_level = nn.Sequential()
             if i == 0:
-                one_conv = nn.Sequential(
-                    nn.Conv2d(
-                        self.in_channels,
-                        self.out_channels,
-                        3,
-                        padding=1,
-                        bias=False),
-
-                    nn.GroupNorm(num_channels=self.out_channels,
-                                 num_groups=32),
-
-                    nn.ReLU(inplace=False)
-                )
+                one_conv = ConvModule(
+                    self.in_channels,
+                    self.out_channels,
+                    3,
+                    padding=1,
+                    conv_cfg=self.conv_cfg,
+                    norm_cfg=self.norm_cfg,
+                    inplace=False)
                 convs_per_level.add_module('conv' + str(i), one_conv)
                 self.convs_all_levels.append(convs_per_level)
                 continue
@@ -563,18 +533,14 @@ class MaskFeatHead(nn.Module):
             for j in range(i):
                 if j == 0:
                     chn = self.in_channels + 2 if i == 3 else self.in_channels
-                    one_conv = nn.Sequential(
-                        nn.Conv2d(
-                            chn,
-                            self.out_channels,
-                            3,
-                            padding=1,
-                            bias=False),
-
-                        nn.GroupNorm(num_channels=self.out_channels,
-                                     num_groups=32),
-
-                        nn.ReLU(inplace=False))
+                    one_conv = ConvModule(
+                        chn,
+                        self.out_channels,
+                        3,
+                        padding=1,
+                        conv_cfg=self.conv_cfg,
+                        norm_cfg=self.norm_cfg,
+                        inplace=False)
                     convs_per_level.add_module('conv' + str(j), one_conv)
                     one_upsample = nn.Upsample(
                         scale_factor=2, mode='bilinear', align_corners=False)
@@ -582,18 +548,14 @@ class MaskFeatHead(nn.Module):
                         'upsample' + str(j), one_upsample)
                     continue
 
-                one_conv = nn.Sequential(
-                    nn.Conv2d(
-                        self.out_channels,
-                        self.out_channels,
-                        3,
-                        padding=1,
-                        bias=False),
-
-                    nn.GroupNorm(num_channels=self.out_channels,
-                                 num_groups=32),
-
-                    nn.ReLU(inplace=False))
+                one_conv = ConvModule(
+                    self.out_channels,
+                    self.out_channels,
+                    3,
+                    padding=1,
+                    conv_cfg=self.conv_cfg,
+                    norm_cfg=self.norm_cfg,
+                    inplace=False)
                 convs_per_level.add_module('conv' + str(j), one_conv)
                 one_upsample = nn.Upsample(
                     scale_factor=2,
@@ -604,17 +566,14 @@ class MaskFeatHead(nn.Module):
             self.convs_all_levels.append(convs_per_level)
 
         self.conv_pred = nn.Sequential(
-            nn.Conv2d(
+            ConvModule(
                 self.out_channels,
-                self.out_channels,
+                self.num_classes,
                 1,
                 padding=0,
-                bias=False),
-
-            nn.GroupNorm(num_channels=self.out_channels,
-                         num_groups=32),
-
-            nn.ReLU(inplace=True))
+                conv_cfg=self.conv_cfg,
+                norm_cfg=self.norm_cfg),
+        )
 
     def init_weights(self):
         for m in self.modules():
@@ -641,4 +600,3 @@ class MaskFeatHead(nn.Module):
 
         feature_pred = self.conv_pred(feature_add_all_level)
         return feature_pred
-

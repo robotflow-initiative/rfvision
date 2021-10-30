@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from rfvision.models.losses import (BoundedIoULoss, CIoULoss, DIoULoss, GIoULoss,
+from rfvision.components.losses import (BoundedIoULoss, CIoULoss, DIoULoss, GIoULoss,
                                  IoULoss)
 
 

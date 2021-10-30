@@ -98,7 +98,7 @@ class MaskRCNNDCTHead(FCNMaskHead):
                  act_cfg=dict(type='ReLU'),
                  init_cfg=None):
 
-        super().__init__(init_cfg)
+        super().__init__(init_cfg=init_cfg)
 
         cfg = dict(conv_cfg=conv_cfg, norm_cfg=norm_cfg, act_cfg=act_cfg)
         self.dct_vector_dim = dct_vector_dim
@@ -128,7 +128,7 @@ class MaskRCNNDCTHead(FCNMaskHead):
             nn.init.normal_(self.predictor_fc3.weight, std=0.001)
             nn.init.constant_(self.predictor_fc3.bias, 0)
 
-    def forward(self, x, decode=True):
+    def forward(self, x):
         """
         Args:
             x: input region feature(s) provided by :class:`ROIHeads`.
@@ -141,10 +141,7 @@ class MaskRCNNDCTHead(FCNMaskHead):
         x = F.relu(self.predictor_fc1(x))
         x = F.relu(self.predictor_fc2(x))
         x = self.predictor_fc3(x)
-        if decode == False:
-            return x
-        else:
-            return self.coder.decode(x)
+        return x
 
     def loss(self, mask_pred, mask_targets, labels):
         loss = dict()
@@ -159,6 +156,16 @@ class MaskRCNNDCTHead(FCNMaskHead):
         loss['loss_mask'] = loss_mask
         return loss
 
+    def get_seg_masks(self, mask_pred, det_bboxes, det_labels, rcnn_test_cfg,
+                      ori_shape, scale_factor, rescale):
+        mask_pred = self.coder.decode(mask_pred)
+        super().get_seg_masks(mask_pred=mask_pred,
+                              det_bboxes= det_bboxes,
+                              det_labels=det_labels,
+                              rcnn_test_cfg=rcnn_test_cfg,
+                              ori_shape=ori_shape,
+                              scale_factor=scale_factor,
+                              rescale=rescale)
 
 if __name__ == '__main__':
     n = 13

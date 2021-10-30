@@ -9,9 +9,14 @@ import torch
 import torch.distributed as dist
 from rflib.image import tensor2imgs
 from rflib.runner import get_dist_info
-
+from rfvision.models.detectors3d import Base3DDetector
+from rfvision.models.detectors import BaseDetector
+from rfvision.models.human_analyzers import BasePose
 from rfvision.core import encode_mask_results
 
+models_3d = (Base3DDetector, )
+models_pose = (BasePose,)
+models_2d = (BaseDetector, )
 
 def single_gpu_test(model,
                     data_loader,
@@ -22,48 +27,73 @@ def single_gpu_test(model,
     results = []
     dataset = data_loader.dataset
     prog_bar = rflib.ProgressBar(len(dataset))
-    for i, data in enumerate(data_loader):
-        with torch.no_grad():
-            result = model(return_loss=False, rescale=True, **data)
+    ################ For Pose ##################
+    if isinstance(model.module, models_pose):
+        for data in data_loader:
+            with torch.no_grad():
+                result = model(return_loss=False, **data)
+            results.append(result)
 
-        batch_size = len(result)
-        if show or out_dir:
-            if batch_size == 1 and isinstance(data['img'][0], torch.Tensor):
-                img_tensor = data['img'][0]
-            else:
-                img_tensor = data['img'][0].data[0]
-            img_metas = data['img_metas'][0].data[0]
-            imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
-            assert len(imgs) == len(img_metas)
-
-            for i, (img, img_meta) in enumerate(zip(imgs, img_metas)):
-                h, w, _ = img_meta['img_shape']
-                img_show = img[:h, :w, :]
-
-                ori_h, ori_w = img_meta['ori_shape'][:-1]
-                img_show = rflib.imresize(img_show, (ori_w, ori_h))
-
-                if out_dir:
-                    out_file = osp.join(out_dir, img_meta['ori_filename'])
+            # use the first key as main key to calculate the batch size
+            batch_size = len(next(iter(data.values())))
+            for _ in range(batch_size):
+                prog_bar.update()
+        return results
+    ################ For 3D ####################
+    if isinstance(model.module, models_3d):
+        for i, data in enumerate(data_loader):
+            with torch.no_grad():
+                result = model(return_loss=False, rescale=True, **data)
+            if show:
+                model.module.show_results(data, result, out_dir=out_dir)
+            results.extend(result)
+            batch_size = len(result)
+            for _ in range(batch_size):
+                prog_bar.update()
+        return results
+    ################## For 2D ###############
+    else:
+        for i, data in enumerate(data_loader):
+            with torch.no_grad():
+                result = model(return_loss=False, rescale=True, **data)
+            batch_size = len(result)
+            if show or out_dir:
+                if batch_size == 1 and isinstance(data['img'][0], torch.Tensor):
+                    img_tensor = data['img'][0]
                 else:
-                    out_file = None
+                    img_tensor = data['img'][0].data[0]
+                img_metas = data['img_metas'][0].data[0]
+                imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
+                assert len(imgs) == len(img_metas)
 
-                model.module.show_result(
-                    img_show,
-                    result[i],
-                    show=show,
-                    out_file=out_file,
-                    score_thr=show_score_thr)
+                for i, (img, img_meta) in enumerate(zip(imgs, img_metas)):
+                    h, w, _ = img_meta['img_shape']
+                    img_show = img[:h, :w, :]
 
-        # encode mask results
-        if isinstance(result[0], tuple):
-            result = [(bbox_results, encode_mask_results(mask_results))
-                      for bbox_results, mask_results in result]
-        results.extend(result)
+                    ori_h, ori_w = img_meta['ori_shape'][:-1]
+                    img_show = rflib.imresize(img_show, (ori_w, ori_h))
 
-        for _ in range(batch_size):
-            prog_bar.update()
-    return results
+                    if out_dir:
+                        out_file = osp.join(out_dir, img_meta['ori_filename'])
+                    else:
+                        out_file = None
+
+                    model.module.show_result(
+                        img_show,
+                        result[i],
+                        show=show,
+                        out_file=out_file,
+                        score_thr=show_score_thr)
+
+            # encode mask results
+            if isinstance(result[0], tuple):
+                result = [(bbox_results, encode_mask_results(mask_results))
+                          for bbox_results, mask_results in result]
+            results.extend(result)
+
+            for _ in range(batch_size):
+                prog_bar.update()
+        return results
 
 
 def multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False):
@@ -92,19 +122,46 @@ def multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False):
     if rank == 0:
         prog_bar = rflib.ProgressBar(len(dataset))
     time.sleep(2)  # This line can prevent deadlock problem in some cases.
-    for i, data in enumerate(data_loader):
-        with torch.no_grad():
-            result = model(return_loss=False, rescale=True, **data)
-            # encode mask results
-            if isinstance(result[0], tuple):
-                result = [(bbox_results, encode_mask_results(mask_results))
-                          for bbox_results, mask_results in result]
-        results.extend(result)
 
-        if rank == 0:
-            batch_size = len(result)
-            for _ in range(batch_size * world_size):
-                prog_bar.update()
+    ################ For Pose ##################
+    if isinstance(model.module, models_pose):
+        for data in data_loader:
+            with torch.no_grad():
+                result = model(return_loss=False, **data)
+            results.append(result)
+            if rank == 0:
+                # use the first key as main key to calculate the batch size
+                batch_size = len(next(iter(data.values())))
+                for _ in range(batch_size * world_size):
+                    prog_bar.update()
+    ################ For 3D ####################
+    elif isinstance(model.module, models_3d):
+        for data in data_loader:
+            with torch.no_grad():
+                result = model(return_loss=False, **data)
+            results.append(result)
+
+            if rank == 0:
+                # use the first key as main key to calculate the batch size
+                batch_size = len(result)
+                for _ in range(batch_size * world_size):
+                    prog_bar.update()
+
+    ################## For 2D #################
+    else:
+        for i, data in enumerate(data_loader):
+            with torch.no_grad():
+                result = model(return_loss=False, rescale=True, **data)
+                # encode mask results
+                if isinstance(result[0], tuple):
+                    result = [(bbox_results, encode_mask_results(mask_results))
+                              for bbox_results, mask_results in result]
+            results.extend(result)
+
+            if rank == 0:
+                batch_size = len(result)
+                for _ in range(batch_size * world_size):
+                    prog_bar.update()
 
     # collect results from all ranks
     if gpu_collect:

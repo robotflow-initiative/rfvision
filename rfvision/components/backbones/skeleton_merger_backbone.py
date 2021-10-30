@@ -6,9 +6,10 @@ import torch.nn as nn
 import torch 
 import torch.nn.functional as F
 
+
 @BACKBONES.register_module()
 class PointNet2ForSkeletonMerger(BasePointNet):
-    def __init__(self, num_classes, init_cfg=None):
+    def __init__(self, n_keypoint, init_cfg=None):
         super().__init__(init_cfg)
         self.sa1 = PointSAModuleMSG(1024, [0.05, 0.1], [16, 32], [[6, 16, 16, 32], [6, 32, 32, 64]])
         self.sa2 = PointSAModuleMSG(256, [0.1, 0.2], [16, 32], [[32+64, 64, 64, 128], [32+64, 64, 96, 128]])
@@ -23,7 +24,7 @@ class PointNet2ForSkeletonMerger(BasePointNet):
         self.conv1 = nn.Conv1d(128, 128, 1)
         self.bn1 = nn.BatchNorm1d(128)
         self.drop1 = nn.Dropout(0.5)
-        self.conv2 = nn.Conv1d(128, num_classes, 1)
+        self.conv2 = nn.Conv1d(128, n_keypoint, 1)
 
     @auto_fp16(apply_to=('points',))
     def forward(self, points):

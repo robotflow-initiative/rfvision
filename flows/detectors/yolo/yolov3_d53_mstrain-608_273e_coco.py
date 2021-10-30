@@ -2,8 +2,7 @@ _base_ = '../_base_/default_runtime.py'
 # model settings
 model = dict(
     type='YOLOV3',
-    init_cfg='open-mmlab://darknet53',
-    backbone=dict(type='Darknet', depth=53, out_indices=(3, 4, 5)),
+    backbone=dict(type='Darknet', depth=53, out_indices=(3, 4, 5), init_cfg='open-mmlab://darknet53',),
     neck=dict(
         type='YOLOV3Neck',
         num_scales=3,
@@ -93,7 +92,7 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=8,
-    workers_per_gpu=4,
+    workers_per_gpu=0,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',

@@ -1,20 +1,26 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
+import warnings
 from rflib import is_tuple_of
 from rflib.utils import build_from_cfg
 
 from rfvision.core import VoxelGenerator
-from rfvision.core.bbox3d import box_np_ops
-from rfvision.datasets.builder import PIPELINES, OBJECTSAMPLERS
+from rfvision.core.bbox3d import (CameraInstance3DBoxes, DepthInstance3DBoxes,
+                               LiDARInstance3DBoxes, box_np_ops)
+from rfvision.datasets.builder import PIPELINES
 from rfvision.datasets.pipelines import RandomFlip
+from ..builder import OBJECTSAMPLERS
 from .data_augment_utils import noise_per_object_v3_
-import warnings
+
 
 @PIPELINES.register_module()
 class RandomDropPointsColor(object):
     r"""Randomly set the color of points to all zeros.
+
     Once this transform is executed, all the points' color will be dropped.
     Refer to `PAConv <https://github.com/CVMI-Lab/PAConv/blob/main/scene_seg/
     util/transform.py#L223>`_ for more details.
+
     Args:
         drop_ratio (float): The probability of dropping point colors.
             Defaults to 0.2.
@@ -27,8 +33,10 @@ class RandomDropPointsColor(object):
 
     def __call__(self, input_dict):
         """Call function to drop point colors.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after color dropping, \
                 'points' key is updated in the result dict.
@@ -38,7 +46,13 @@ class RandomDropPointsColor(object):
             'color' in points.attribute_dims, \
             'Expect points have color attribute'
 
-        if np.random.rand() < self.drop_ratio:
+        # this if-expression is a bit strange
+        # `RandomDropPointsColor` is used in training 3D segmentor PAConv
+        # we discovered in our experiments that, using
+        # `if np.random.rand() > 1.0 - self.drop_ratio` consistently leads to
+        # better results than using `if np.random.rand() < self.drop_ratio`
+        # so we keep this hack in our codebase
+        if np.random.rand() > 1.0 - self.drop_ratio:
             points.color = points.color * 0.0
         return input_dict
 
@@ -52,9 +66,11 @@ class RandomDropPointsColor(object):
 @PIPELINES.register_module()
 class RandomFlip3D(RandomFlip):
     """Flip the points & bbox.
+
     If the input dict contains the key "flip", then the flag will be used,
     otherwise it will be randomly decided by a ratio specified in the init
     method.
+
     Args:
         sync_2d (bool, optional): Whether to apply flip according to the 2D
             images. If True, it will apply the same flip as that to 2D images.
@@ -86,9 +102,11 @@ class RandomFlip3D(RandomFlip):
 
     def random_flip_data_3d(self, input_dict, direction='horizontal'):
         """Flip 3D data randomly.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
             direction (str): Flip direction. Default: horizontal.
+
         Returns:
             dict: Flipped results, 'points', 'bbox3d_fields' keys are \
                 updated in the result dict.
@@ -108,15 +126,23 @@ class RandomFlip3D(RandomFlip):
         if 'centers2d' in input_dict:
             assert self.sync_2d is True and direction == 'horizontal', \
                 'Only support sync_2d=True and horizontal flip with images'
-            w = input_dict['img_shape'][1]
+            w = input_dict['ori_shape'][1]
             input_dict['centers2d'][..., 0] = \
                 w - input_dict['centers2d'][..., 0]
+            # need to modify the horizontal position of camera center
+            # along u-axis in the image (flip like centers2d)
+            # ['cam2img'][0][2] = c_u
+            # see more details and examples at
+            # https://github.com/open-mmlab/rfvisionection3d/pull/744
+            input_dict['cam2img'][0][2] = w - input_dict['cam2img'][0][2]
 
     def __call__(self, input_dict):
         """Call function to flip points, values in the ``bbox3d_fields`` and \
         also flip 2D image and its annotations.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Flipped results, 'flip', 'flip_direction', \
                 'pcd_horizontal_flip' and 'pcd_vertical_flip' keys are added \
@@ -160,8 +186,10 @@ class RandomFlip3D(RandomFlip):
 @PIPELINES.register_module()
 class RandomJitterPoints(object):
     """Randomly jitter point coordinates.
+
     Different from the global translation in ``GlobalRotScaleTrans``, here we \
         apply different noises to each point in a scene.
+
     Args:
         jitter_std (list[float]): The standard deviation of jittering noise.
             This applies random noise to all points in a 3D scene, which is \
@@ -170,6 +198,7 @@ class RandomJitterPoints(object):
         clip_range (list[float] | None): Clip the randomly generated jitter \
             noise into this range. If None is given, don't perform clipping.
             Defaults to [-0.05, 0.05]
+
     Note:
         This transform should only be used in point cloud segmentation tasks \
             because we don't transform ground-truth bboxes accordingly.
@@ -195,8 +224,10 @@ class RandomJitterPoints(object):
 
     def __call__(self, input_dict):
         """Call function to jitter all the points in the scene.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after adding noise to each point, \
                 'points' key is updated in the result dict.
@@ -223,6 +254,7 @@ class RandomJitterPoints(object):
 @PIPELINES.register_module()
 class ObjectSample(object):
     """Sample GT objects to the data.
+
     Args:
         db_sampler (dict): Config dict of the database sampler.
         sample_2d (bool): Whether to also paste 2D image patch to the images
@@ -240,9 +272,11 @@ class ObjectSample(object):
     @staticmethod
     def remove_points_in_boxes(points, boxes):
         """Remove the points in the sampled bounding boxes.
+
         Args:
             points (:obj:`BasePoints`): Input point cloud array.
             boxes (np.ndarray): Sampled ground truth boxes.
+
         Returns:
             np.ndarray: Points with those in the boxes removed.
         """
@@ -252,8 +286,10 @@ class ObjectSample(object):
 
     def __call__(self, input_dict):
         """Call function to sample ground truth objects to the data.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after object sampling augmentation, \
                 'points', 'gt_bboxes_3d', 'gt_labels_3d' keys are updated \
@@ -322,6 +358,7 @@ class ObjectSample(object):
 @PIPELINES.register_module()
 class ObjectNoise(object):
     """Apply noise to each GT objects in the scene.
+
     Args:
         translation_std (list[float], optional): Standard deviation of the
             distribution where translation noise are sampled from.
@@ -346,8 +383,10 @@ class ObjectNoise(object):
 
     def __call__(self, input_dict):
         """Call function to apply noise to each ground truth in the scene.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after adding noise to each object, \
                 'points', 'gt_bboxes_3d' keys are updated in the result dict.
@@ -384,8 +423,10 @@ class ObjectNoise(object):
 @PIPELINES.register_module()
 class GlobalAlignment(object):
     """Apply global alignment to 3D scene points by rotation and translation.
+
     Args:
         rotation_axis (int): Rotation axis for points and bboxes rotation.
+
     Note:
         We do not record the applied rotation and translation as in \
             GlobalRotScaleTrans. Because usually, we do not need to reverse \
@@ -399,9 +440,11 @@ class GlobalAlignment(object):
 
     def _trans_points(self, input_dict, trans_factor):
         """Private function to translate points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
             trans_factor (np.ndarray): Translation vector to be applied.
+
         Returns:
             dict: Results after translation, 'points' is updated in the dict.
         """
@@ -409,9 +452,11 @@ class GlobalAlignment(object):
 
     def _rot_points(self, input_dict, rot_mat):
         """Private function to rotate bounding boxes and points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
             rot_mat (np.ndarray): Rotation matrix to be applied.
+
         Returns:
             dict: Results after rotation, 'points' is updated in the dict.
         """
@@ -420,6 +465,7 @@ class GlobalAlignment(object):
 
     def _check_rot_mat(self, rot_mat):
         """Check if rotation matrix is valid for self.rotation_axis.
+
         Args:
             rot_mat (np.ndarray): Rotation matrix to be applied.
         """
@@ -432,8 +478,10 @@ class GlobalAlignment(object):
 
     def __call__(self, input_dict):
         """Call function to shuffle points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after global alignment, 'points' and keys in \
                 input_dict['bbox3d_fields'] are updated in the result dict.
@@ -462,6 +510,7 @@ class GlobalAlignment(object):
 @PIPELINES.register_module()
 class GlobalRotScaleTrans(object):
     """Apply global rotation, scaling and translation to a 3D scene.
+
     Args:
         rot_range (list[float]): Range of rotation angle.
             Defaults to [-0.78539816, 0.78539816] (close to [-pi/4, pi/4]).
@@ -505,8 +554,10 @@ class GlobalRotScaleTrans(object):
 
     def _trans_bbox_points(self, input_dict):
         """Private function to translate bounding boxes and points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after translation, 'points', 'pcd_trans' \
                 and keys in input_dict['bbox3d_fields'] are updated \
@@ -522,8 +573,10 @@ class GlobalRotScaleTrans(object):
 
     def _rot_bbox_points(self, input_dict):
         """Private function to rotate bounding boxes and points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after rotation, 'points', 'pcd_rotation' \
                 and keys in input_dict['bbox3d_fields'] are updated \
@@ -548,8 +601,10 @@ class GlobalRotScaleTrans(object):
 
     def _scale_bbox_points(self, input_dict):
         """Private function to scale bounding boxes and points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after scaling, 'points'and keys in \
                 input_dict['bbox3d_fields'] are updated in the result dict.
@@ -568,8 +623,10 @@ class GlobalRotScaleTrans(object):
 
     def _random_scale(self, input_dict):
         """Private function to randomly set the scale factor.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after scaling, 'pcd_scale_factor' are updated \
                 in the result dict.
@@ -581,8 +638,10 @@ class GlobalRotScaleTrans(object):
     def __call__(self, input_dict):
         """Private function to rotate, scale and translate bounding boxes and \
         points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after scaling, 'points', 'pcd_rotation',
                 'pcd_scale_factor', 'pcd_trans' and keys in \
@@ -618,8 +677,10 @@ class PointShuffle(object):
 
     def __call__(self, input_dict):
         """Call function to shuffle points.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after filtering, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -645,25 +706,34 @@ class PointShuffle(object):
 @PIPELINES.register_module()
 class ObjectRangeFilter(object):
     """Filter objects by the range.
+
     Args:
         point_cloud_range (list[float]): Point cloud range.
     """
 
     def __init__(self, point_cloud_range):
         self.pcd_range = np.array(point_cloud_range, dtype=np.float32)
-        self.bev_range = self.pcd_range[[0, 1, 3, 4]]
 
     def __call__(self, input_dict):
         """Call function to filter objects by the range.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after filtering, 'gt_bboxes_3d', 'gt_labels_3d' \
                 keys are updated in the result dict.
         """
+        # Check points instance type and initialise bev_range
+        if isinstance(input_dict['gt_bboxes_3d'],
+                      (LiDARInstance3DBoxes, DepthInstance3DBoxes)):
+            bev_range = self.pcd_range[[0, 1, 3, 4]]
+        elif isinstance(input_dict['gt_bboxes_3d'], CameraInstance3DBoxes):
+            bev_range = self.pcd_range[[0, 2, 3, 5]]
+
         gt_bboxes_3d = input_dict['gt_bboxes_3d']
         gt_labels_3d = input_dict['gt_labels_3d']
-        mask = gt_bboxes_3d.in_range_bev(self.bev_range)
+        mask = gt_bboxes_3d.in_range_bev(bev_range)
         gt_bboxes_3d = gt_bboxes_3d[mask]
         # mask is a torch tensor but gt_labels_3d is still numpy array
         # using mask to index gt_labels_3d will cause bug when
@@ -688,6 +758,7 @@ class ObjectRangeFilter(object):
 @PIPELINES.register_module()
 class PointsRangeFilter(object):
     """Filter points by the range.
+
     Args:
         point_cloud_range (list[float]): Point cloud range.
     """
@@ -697,8 +768,10 @@ class PointsRangeFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter points by the range.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after filtering, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -730,6 +803,7 @@ class PointsRangeFilter(object):
 @PIPELINES.register_module()
 class ObjectNameFilter(object):
     """Filter GT objects by their names.
+
     Args:
         classes (list[str]): List of class names to be kept for training.
     """
@@ -740,8 +814,10 @@ class ObjectNameFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter objects by their names.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after filtering, 'gt_bboxes_3d', 'gt_labels_3d' \
                 keys are updated in the result dict.
@@ -762,39 +838,68 @@ class ObjectNameFilter(object):
 
 
 @PIPELINES.register_module()
-class IndoorPointSample(object):
-    """Indoor point sample.
+class PointSample(object):
+    """Point sample.
+
     Sampling data to a certain number.
+
     Args:
-        name (str): Name of the dataset.
         num_points (int): Number of points to be sampled.
+        sample_range (float, optional): The range where to sample points.
+            If not None, the points with depth larger than `sample_range` are
+            prior to be sampled. Defaults to None.
+        replace (bool, optional): Whether the sampling is with or without
+            replacement. Defaults to False.
     """
 
-    def __init__(self, num_points):
+    def __init__(self, num_points, sample_range=None, replace=False):
         self.num_points = num_points
+        self.sample_range = sample_range
+        self.replace = replace
 
-    def points_random_sampling(self,
-                               points,
-                               num_samples,
-                               replace=None,
-                               return_choices=False):
+    def _points_random_sampling(self,
+                                points,
+                                num_samples,
+                                sample_range=None,
+                                replace=False,
+                                return_choices=False):
         """Points random sampling.
+
         Sample points to a certain number.
+
         Args:
             points (np.ndarray | :obj:`BasePoints`): 3D Points.
             num_samples (int): Number of samples to be sampled.
-            replace (bool): Whether the sample is with or without replacement.
-            Defaults to None.
-            return_choices (bool): Whether return choice. Defaults to False.
+            sample_range (float, optional): Indicating the range where the
+                points will be sampled. Defaults to None.
+            replace (bool, optional): Sampling with or without replacement.
+                Defaults to None.
+            return_choices (bool, optional): Whether return choice.
+                Defaults to False.
         Returns:
             tuple[np.ndarray] | np.ndarray:
                 - points (np.ndarray | :obj:`BasePoints`): 3D Points.
                 - choices (np.ndarray, optional): The generated random samples.
         """
-        if replace is None:
+        if not replace:
             replace = (points.shape[0] < num_samples)
-        choices = np.random.choice(
-            points.shape[0], num_samples, replace=replace)
+        point_range = range(len(points))
+        if sample_range is not None and not replace:
+            # Only sampling the near points when len(points) >= num_samples
+            depth = np.linalg.norm(points.tensor, axis=1)
+            far_inds = np.where(depth > sample_range)[0]
+            near_inds = np.where(depth <= sample_range)[0]
+            # in case there are too many far points
+            if len(far_inds) > num_samples:
+                far_inds = np.random.choice(
+                    far_inds, num_samples, replace=False)
+            point_range = near_inds
+            num_samples -= len(far_inds)
+        choices = np.random.choice(point_range, num_samples, replace=replace)
+        if sample_range is not None and not replace:
+            choices = np.concatenate((far_inds, choices))
+            # Shuffle points after sampling
+            np.random.shuffle(choices)
         if return_choices:
             return points[choices], choices
         else:
@@ -802,6 +907,7 @@ class IndoorPointSample(object):
 
     def __call__(self, results):
         """Call function to sample points to in indoor scenes.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
         Returns:
@@ -809,8 +915,18 @@ class IndoorPointSample(object):
                 and 'pts_semantic_mask' keys are updated in the result dict.
         """
         points = results['points']
-        points, choices = self.points_random_sampling(
-            points, self.num_points, return_choices=True)
+        # Points in Camera coord can provide the depth information.
+        # TODO: Need to suport distance-based sampling for other coord system.
+        if self.sample_range is not None:
+            from rfvision.core.points import CameraPoints
+            assert isinstance(points, CameraPoints), \
+                'Sampling based on distance is only appliable for CAMERA coord'
+        points, choices = self._points_random_sampling(
+            points,
+            self.num_points,
+            self.sample_range,
+            self.replace,
+            return_choices=True)
         results['points'] = points
 
         pts_instance_mask = results.get('pts_instance_mask', None)
@@ -829,15 +945,37 @@ class IndoorPointSample(object):
     def __repr__(self):
         """str: Return a string that describes the module."""
         repr_str = self.__class__.__name__
-        repr_str += f'(num_points={self.num_points})'
+        repr_str += f'(num_points={self.num_points},'
+        repr_str += f' sample_range={self.sample_range},'
+        repr_str += f' replace={self.replace})'
+
         return repr_str
+
+
+@PIPELINES.register_module()
+class IndoorPointSample(PointSample):
+    """Indoor point sample.
+
+    Sampling data to a certain number.
+    NOTE: IndoorPointSample is deprecated in favor of PointSample
+
+    Args:
+        num_points (int): Number of points to be sampled.
+    """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            'IndoorPointSample is deprecated in favor of PointSample')
+        super(IndoorPointSample, self).__init__(*args, **kwargs)
 
 
 @PIPELINES.register_module()
 class IndoorPatchPointSample(object):
     r"""Indoor point sample within a patch. Modified from `PointNet++ <https://
     github.com/charlesq34/pointnet2/blob/master/scannet/scannet_dataset.py>`_.
+
     Sampling data to a certain number for semantic segmentation.
+
     Args:
         num_points (int): Number of points to be sampled.
         block_size (float, optional): Size of a block to sample points from.
@@ -848,6 +986,7 @@ class IndoorPatchPointSample(object):
             Defaults to None.
         ignore_index (int, optional): Label index that won't be used for the
             segmentation task. This is set in PointSegClassMapping as neg_cls.
+            If not None, will be used as a patch selection criterion.
             Defaults to None.
         use_normalized_coord (bool, optional): Whether to use normalized xyz as
             additional features. Defaults to False.
@@ -855,10 +994,13 @@ class IndoorPatchPointSample(object):
             is invalid. Defaults to 10.
         enlarge_size (float | None, optional): Enlarge the sampled patch to
             [-block_size / 2 - enlarge_size, block_size / 2 + enlarge_size] as
-            an augmentation. If None, set it as 0.01. Defaults to 0.2.
+            an augmentation. If None, set it as 0. Defaults to 0.2.
         min_unique_num (int | None, optional): Minimum number of unique points
             the sampled patch should contain. If None, use PointNet++'s method
             to judge uniqueness. Defaults to None.
+        eps (float, optional): A value added to patch boundary to guarantee
+            points coverage. Defaults to 1e-2.
+
     Note:
         This transform should only be used in the training process of point
             cloud segmentation tasks. For the sliding patch generation and
@@ -874,14 +1016,16 @@ class IndoorPatchPointSample(object):
                  use_normalized_coord=False,
                  num_try=10,
                  enlarge_size=0.2,
-                 min_unique_num=None):
+                 min_unique_num=None,
+                 eps=1e-2):
         self.num_points = num_points
         self.block_size = block_size
         self.ignore_index = ignore_index
         self.use_normalized_coord = use_normalized_coord
         self.num_try = num_try
-        self.enlarge_size = enlarge_size if enlarge_size is not None else 0.01
+        self.enlarge_size = enlarge_size if enlarge_size is not None else 0.0
         self.min_unique_num = min_unique_num
+        self.eps = eps
 
         if sample_rate is not None:
             warnings.warn(
@@ -891,8 +1035,10 @@ class IndoorPatchPointSample(object):
     def _input_generation(self, coords, patch_center, coord_max, attributes,
                           attribute_dims, point_type):
         """Generating model input.
+
         Generate input by subtracting patch center and adding additional \
             features. Currently support colors and normalized xyz as features.
+
         Args:
             coords (np.ndarray): Sampled 3D Points.
             patch_center (np.ndarray): Center coordinate of the selected patch.
@@ -901,6 +1047,7 @@ class IndoorPatchPointSample(object):
             attribute_dims (dict): Dictionary to indicate the meaning of extra
                 dimension.
             point_type (type): class of input points inherited from BasePoints.
+
         Returns:
             :obj:`BasePoints`: The generated input data.
         """
@@ -926,17 +1073,19 @@ class IndoorPatchPointSample(object):
 
         return points
 
-    def _patch_points_sampling(self, points, sem_mask, replace=None):
+    def _patch_points_sampling(self, points, sem_mask):
         """Patch points sampling.
+
         First sample a valid patch.
         Then sample points within that patch to a certain number.
+
         Args:
             points (:obj:`BasePoints`): 3D Points.
             sem_mask (np.ndarray): semantic segmentation mask for input points.
-            replace (bool): Whether the sample is with or without replacement.
-                Defaults to None.
+
         Returns:
             tuple[:obj:`BasePoints`, np.ndarray] | :obj:`BasePoints`:
+
                 - points (:obj:`BasePoints`): 3D Points.
                 - choices (np.ndarray): The generated random samples.
         """
@@ -952,7 +1101,8 @@ class IndoorPatchPointSample(object):
             # random sample a point as patch center
             cur_center = coords[np.random.choice(coords.shape[0])]
 
-            # boundary of a patch
+            # boundary of a patch, which would be enlarged by
+            # `self.enlarge_size` as an augmentation
             cur_max = cur_center + np.array(
                 [self.block_size / 2.0, self.block_size / 2.0, 0.0])
             cur_min = cur_center - np.array(
@@ -969,14 +1119,14 @@ class IndoorPatchPointSample(object):
 
             cur_coords = coords[cur_choice, :]
             cur_sem_mask = sem_mask[cur_choice]
-
-            # two criterion for patch sampling, adopted from PointNet++
-            # points within selected patch shoule be scattered separately
+            point_idxs = np.where(cur_choice)[0]
             mask = np.sum(
-                (cur_coords >= (cur_min - 0.01)) * (cur_coords <=
-                                                    (cur_max + 0.01)),
+                (cur_coords >= (cur_min - self.eps)) * (cur_coords <=
+                                                        (cur_max + self.eps)),
                 axis=1) == 3
 
+            # two criteria for patch sampling, adopted from PointNet++
+            # 1. selected patch should contain enough unique points
             if self.min_unique_num is None:
                 # use PointNet++'s method as default
                 # [31, 31, 62] are just some big values used to transform
@@ -989,9 +1139,10 @@ class IndoorPatchPointSample(object):
                                  vidx[:, 2])
                 flag1 = len(vidx) / 31.0 / 31.0 / 62.0 >= 0.02
             else:
+                # if `min_unique_num` is provided, directly compare with it
                 flag1 = mask.sum() >= self.min_unique_num
 
-            # selected patch should contain enough annotated points
+            # 2. selected patch should contain enough annotated points
             if self.ignore_index is None:
                 flag2 = True
             else:
@@ -1001,11 +1152,19 @@ class IndoorPatchPointSample(object):
             if flag1 and flag2:
                 break
 
-        # random sample idx
-        if replace is None:
-            replace = (cur_sem_mask.shape[0] < self.num_points)
-        choices = np.random.choice(
-            np.where(cur_choice)[0], self.num_points, replace=replace)
+        # sample idx to `self.num_points`
+        if point_idxs.size >= self.num_points:
+            # no duplicate in sub-sampling
+            choices = np.random.choice(
+                point_idxs, self.num_points, replace=False)
+        else:
+            # do not use random choice here to avoid some points not counted
+            dup = np.random.choice(point_idxs.size,
+                                   self.num_points - point_idxs.size)
+            idx_dup = np.concatenate(
+                [np.arange(point_idxs.size),
+                 np.array(dup)], 0)
+            choices = point_idxs[idx_dup]
 
         # construct model input
         points = self._input_generation(coords[choices], cur_center, coord_max,
@@ -1016,8 +1175,10 @@ class IndoorPatchPointSample(object):
 
     def __call__(self, results):
         """Call function to sample points to in indoor scenes.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after sampling, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -1048,13 +1209,15 @@ class IndoorPatchPointSample(object):
         repr_str += f' use_normalized_coord={self.use_normalized_coord},'
         repr_str += f' num_try={self.num_try},'
         repr_str += f' enlarge_size={self.enlarge_size},'
-        repr_str += f' min_unique_num={self.min_unique_num})'
+        repr_str += f' min_unique_num={self.min_unique_num},'
+        repr_str += f' eps={self.eps})'
         return repr_str
 
 
 @PIPELINES.register_module()
 class BackgroundPointsFilter(object):
     """Filter background points near the bounding box.
+
     Args:
         bbox_enlarge_range (tuple[float], float): Bbox enlarge range.
     """
@@ -1072,8 +1235,10 @@ class BackgroundPointsFilter(object):
 
     def __call__(self, input_dict):
         """Call function to filter points by the range.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after filtering, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
@@ -1088,10 +1253,10 @@ class BackgroundPointsFilter(object):
         enlarged_gt_bboxes_3d = gt_bboxes_3d_np.copy()
         enlarged_gt_bboxes_3d[:, 3:6] += self.bbox_enlarge_range
         points_numpy = points.tensor.clone().numpy()
-        foreground_masks = box_np_ops.points_in_rbbox(points_numpy,
-                                                      gt_bboxes_3d_np)
+        foreground_masks = box_np_ops.points_in_rbbox(
+            points_numpy, gt_bboxes_3d_np, origin=(0.5, 0.5, 0.5))
         enlarge_foreground_masks = box_np_ops.points_in_rbbox(
-            points_numpy, enlarged_gt_bboxes_3d)
+            points_numpy, enlarged_gt_bboxes_3d, origin=(0.5, 0.5, 0.5))
         foreground_masks = foreground_masks.max(1)
         enlarge_foreground_masks = enlarge_foreground_masks.max(1)
         valid_masks = ~np.logical_and(~foreground_masks,
@@ -1117,7 +1282,9 @@ class BackgroundPointsFilter(object):
 @PIPELINES.register_module()
 class VoxelBasedPointSampler(object):
     """Voxel based point sampler.
+
     Apply voxel sampling to multiple sweep points.
+
     Args:
         cur_sweep_cfg (dict): Config for sampling current points.
         prev_sweep_cfg (dict): Config for sampling previous points.
@@ -1140,11 +1307,13 @@ class VoxelBasedPointSampler(object):
 
     def _sample_points(self, points, sampler, point_dim):
         """Sample points for each points subset.
+
         Args:
             points (np.ndarray): Points subset to be sampled.
             sampler (VoxelGenerator): Voxel based sampler for
                 each points subset.
             point_dim (int): The dimention of each points
+
         Returns:
             np.ndarray: Sampled points.
         """
@@ -1164,8 +1333,10 @@ class VoxelBasedPointSampler(object):
 
     def __call__(self, results):
         """Call function to sample points from multiple sweeps.
+
         Args:
             input_dict (dict): Result dict from loading pipeline.
+
         Returns:
             dict: Results after sampling, 'points', 'pts_instance_mask' \
                 and 'pts_semantic_mask' keys are updated in the result dict.
