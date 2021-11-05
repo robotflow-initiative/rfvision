@@ -100,19 +100,6 @@ class IKDataset(Custom3DDataset):
         results = {'joints_xyz': joints_xyz,
                    'quat': quat}
 
-        # results.update(self._preprocess_joint(joints_xyz))  # add preprocess info to results
-        return results
-
-    def _preprocess_joint(self, joints_xyz):
-        joint_bone = np.linalg.norm(self.ref_bone_link[1] - self.ref_bone_link[0])
-        joints_xyz_ik = joints_xyz / joint_bone
-        kin_chain = np.array([joints_xyz_ik[i] - joints_xyz_ik[SNAP_PARENT[i]] for i in range(len(joints_xyz_ik))])
-        kin_len = np.linalg.norm(kin_chain, ord=2, axis=-1, keepdims=True)
-
-        results = {'joint_bone': joint_bone,
-                   'joints_xyz_ik': joints_xyz_ik,
-                   'kin_chain': kin_chain,
-                   'kin_len': kin_len}
         return results
 
 

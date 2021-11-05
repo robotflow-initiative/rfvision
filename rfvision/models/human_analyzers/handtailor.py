@@ -2,7 +2,7 @@ from rfvision.models.builder import build_detector
 import numpy as np
 from rfvision.models.human_analyzers.utils.mano_layers import ManoLayer
 import torch
-from rfvision.models import Base3DDetector
+from rfvision.models.detectors3d import Base3DDetector
 from rfvision.core.visualizer_pose import imshow_mesh_3d
 import cv2
 

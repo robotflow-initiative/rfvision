@@ -24,9 +24,9 @@ def normalize_point_cloud(pc):
     return pc_normalized, centroid, m
 
 triangles = np.loadtxt('/home/hanyang/weights/handtailor/hand.npy')
-# pts_ik = '/home/hanyang/work_dir/iknet/epoch_50.pth'
-pts_ik = '/home/hanyang/ik_lvjun.pt'
-cfg_ik = '/home/hanyang/rfvision/flows/human_analyzers/hand/iknet.py'
+pts_ik = '/home/hanyang/work_dir/iknet/epoch_50.pth'
+# pts_ik = '/home/hanyang/ik_lvjun.pt'
+cfg_ik = '/home/hanyang/rfvision/flows/human_analyzers/hand/others/iknet.py'
 cfg_ik = rflib.Config.fromfile(cfg_ik)
 m_ik = build_detector(cfg_ik.model)
 load_checkpoint(m_ik, pts_ik)
@@ -57,7 +57,7 @@ for id in range(10):
     reorder = np.array([20, 3,2,1,0, 7,6,5,4, 11,10,9,8, 15,14,13,12, 19,18,17,16])
 
     joint_bone = np.linalg.norm(joints_xyz[9] - joints_xyz[0])
-    joints_xyz / joint_bone
+    # joints_xyz / joint_bone
 
     joints_xyz = joints_xyz[reorder]
     joints_xyz = normalize_point_cloud(joints_xyz)[0]

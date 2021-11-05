@@ -46,6 +46,7 @@ class Rhd3DDataset(Rhd2DDataset):
                 # For test set, joints_z (root_relative, root_joint_id: 0) in range (-199.5999755859375, 189.99996948242188)
                 joints_xyz = np.array(obj['joint_cam'])
                 joints_xyz_rel = joints_xyz - joints_xyz[0]  # root relative, root_joint_id: 0
+
                 joints_3d = np.zeros((num_joints, 3), dtype=np.float32)
                 joints_3d_visible = np.zeros((num_joints, 3), dtype=np.float32)
                 keypoints = np.array(obj['keypoints']).reshape(-1, 3)

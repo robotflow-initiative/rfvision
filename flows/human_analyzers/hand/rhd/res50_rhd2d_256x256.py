@@ -1,4 +1,4 @@
-_base_ = ['../_base_/datasets/rhd2d.py']
+_base_ = ['../../_base_/datasets/rhd2d.py']
 log_level = 'INFO'
 load_from = None
 resume_from = None

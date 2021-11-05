@@ -1,4 +1,4 @@
-_base_ = ['../_base_/datasets/rhd2d.py']
+_base_ = ['../../_base_/datasets/rhd2d.py']
 log_level = 'INFO'
 load_from = None
 resume_from = None
@@ -6,13 +6,14 @@ dist_params = dict(backend='nccl')
 workflow = [('train', 1)]
 checkpoint_config = dict(interval=50)
 evaluation = dict(
-    interval=219,
+    interval=50,
     metric=['MRRPE', 'MPJPE', 'Handedness_acc'],
     save_best='MPJPE_all')
 optimizer = dict(
     type='Adam',
-    lr=5e-4,
+    lr=1e-4,
 )
+gpu_ids = range(1, 3)
 optimizer_config = dict(grad_clip=None)
 # learning policy
 lr_config = dict(
@@ -20,10 +21,11 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=0.001,
-    step=[170, 200])
+    step=[])
 total_epochs = 210
+
 log_config = dict(
-    interval=20,
+    interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
@@ -152,10 +154,10 @@ test_pipeline = val_pipeline
 
 data_root = '/hdd0/data/rhd/RHD_published_v2'
 data = dict(
-    samples_per_gpu=1,
-    workers_per_gpu=0,
-    val_dataloader=dict(samples_per_gpu=32),
-    test_dataloader=dict(samples_per_gpu=32),
+    samples_per_gpu=64,
+    workers_per_gpu=8,
+    val_dataloader=dict(samples_per_gpu=16),
+    test_dataloader=dict(samples_per_gpu=16),
     train=dict(
         type='Rhd3DDataset',
         ann_file=f'{data_root}/annotations/rhd_train.json',

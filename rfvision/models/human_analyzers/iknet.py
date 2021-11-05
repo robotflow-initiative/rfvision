@@ -1,5 +1,5 @@
 from rfvision.models.builder import build_backbone, HUMAN_ANALYZERS
-from rfvision.models import Base3DDetector
+from rfvision.models.detectors3d import Base3DDetector
 
 import torch.nn as nn
 import torch
@@ -12,7 +12,7 @@ from rfvision.components.utils import (normalize_quaternion, quaternion_to_angle
 
 
 # @HUMAN_ANALYZERS.register_module()
-# class INKVNet(Base3DDetector):
+# class IKnet(Base3DDetector):
 #     def __init__(self,
 #                  num_joints=21,
 #                  in_channels=21 * 3,
@@ -117,7 +117,7 @@ from rfvision.components.utils import (normalize_quaternion, quaternion_to_angle
 
 
 @HUMAN_ANALYZERS.register_module()
-class INKVNet(Base3DDetector):
+class IKNet(Base3DDetector):
     def __init__(self,
                  num_joints=21,
                  in_channels=21 * 3,
@@ -146,19 +146,11 @@ class INKVNet(Base3DDetector):
         self.layers = nn.Sequential(*layers)
 
     def forward_train(self, joints_xyz, quat):
-        # joints_xyz = joints_xyz.contiguous().view(-1, self.num_joints * 3)
-        # pred_full_poses = self.layers(joints_xyz).view(-1, 16, 3) # (bz, 3 * 16)
-        # loss_full_poses = F.mse_loss(pred_full_poses, full_poses)
-        # losses = {'loss_so3': loss_full_poses}
-
 
         joints_xyz = joints_xyz.contiguous().view(-1, self.num_joints * 3)
-        # quat_pred = self.layers(joints_xyz).view(-1, 16, 3) # (bz, 3 * 16)
         quat_pred = self.layers(joints_xyz) # (bz, 3 * 16)
         quat_pred = quat_pred.view(-1, 16, 4)
         quat_pred = normalize_quaternion(quat_pred)
-        # theta = quaternion_to_angle_axis(quat_pred).contiguous()
-        # theta = theta.view(-1, 16 * 3)
 
         # loss
         loss_quat_l2 = F.mse_loss(quat_pred, quat)
@@ -167,25 +159,18 @@ class INKVNet(Base3DDetector):
         real_part = real_part[..., -1]
         loss_quat_cos = F.l1_loss(real_part, torch.ones_like(real_part))
 
-        # loss_theta = F.mse_loss(theta, torch.zeros_like(theta))
-
         losses = {'loss_quat_l2': loss_quat_l2,
                   'loss_quat_cos': loss_quat_cos,
-                  # 'loss_theta': loss_theta
                   }
         return losses
 
     def forward_test(self, joints_xyz):
-        # joints_xyz = joints_xyz.contiguous().view(-1, self.num_joints * 3)
-        # # If ValueError: Expected more than 1 value per channel when training, got input size [1, 63], model.eval() is needed!
-        # full_poses = self.layers(joints_xyz)
         joints_xyz = joints_xyz.contiguous().view(-1, self.num_joints * 3)
         quat = self.layers(joints_xyz)
         quat = quat.view(-1, 16, 4)
         quat = normalize_quaternion(quat)
         theta = quaternion_to_angle_axis(quat).contiguous()
         theta = theta.view(-1, 16 * 3)
-        # return full_poses
         return theta
 
     def forward(self, return_loss=True, **kwargs):

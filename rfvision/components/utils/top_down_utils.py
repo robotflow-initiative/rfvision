@@ -212,7 +212,7 @@ def depth_map_to_point_cloud(depth_map, K, depth_scale=1, flatten=True):
     y = (h_map - cy) * z / fy
     pc = np.dstack((x, y, z)) if flatten == False else np.dstack((x, y, z)).reshape(-1, 3)
 
-    # cv2.rgbd.depthTo3d(depth_map.astype('float32'), K.astype('float32'))
+    cv2.rgbd.depthTo3d(depth_map.astype('float32'), K.astype('float32'))
     return pc
 
 def normalize_quaternion(quaternion, eps=1e-12):

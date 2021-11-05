@@ -17,8 +17,8 @@ except (ImportError, ModuleNotFoundError):
     has_trimesh = False
 
 try:
-    # os.environ["PYOPENGL_PLATFORM"] = "egl"
-    # import pyrender
+    os.environ["PYOPENGL_PLATFORM"] = "egl"
+    import pyrender
     has_pyrender = True
 except (ImportError, ModuleNotFoundError):
     has_pyrender = False

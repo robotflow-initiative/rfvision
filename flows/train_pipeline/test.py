@@ -87,12 +87,12 @@ def parse_args():
         default='none',
         help='job launcher')
 
-    # parser.add_argument('--gpu-ids',
-    #                     help='ids of gpus to use',
-    #                     type=int,
-    #                     nargs='+',
-    #                     default=[0]
-    #                     )
+    parser.add_argument('--gpu-ids',
+                        help='ids of gpus to use',
+                        type=int,
+                        nargs='+',
+                        default=[0]
+                        )
 
     parser.add_argument('--local_rank', type=int, default=0)
     args = parser.parse_args()
@@ -211,7 +211,7 @@ def main():
             model.CLASSES = dataset.CLASSES
 
     if not distributed:
-        model = RFDataParallel(model, device_ids=[0])
+        model = RFDataParallel(model, device_ids=args.gpu_ids)
         outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
                                   args.show_score_thr)
     else:

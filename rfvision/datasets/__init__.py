@@ -13,7 +13,9 @@ from .arti import ArtiImgDataset, ArtiSynDataset, ArtiRealDataset
 from .sunrgbd_dataset import SUNRGBDDataset
 from .shapenet_v2 import ShapeNetCoreV2HDF5
 from .keypointnet import KeypointNetDataset
-from .pose_dataset import FreiHandDataset, DatasetInfo, InterHand3DDataset, Rhd2DDataset
+from .pose_dataset import DatasetInfo, InterHand3DDataset, Rhd2DDataset
+from .custom_dataset import *
+
 
 __all__ = [
     'CustomDataset', 'CocoDataset', 'GroupSampler', 'DistributedGroupSampler',

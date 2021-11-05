@@ -43,7 +43,6 @@ channel_cfg = dict(
 # model settings
 model = dict(
     type='PoseLifter',
-    pretrained=None,
     backbone=dict(
         type='TCN',
         in_channels=2 * 17,
@@ -168,7 +167,7 @@ data = dict(
     test_dataloader=dict(samples_per_gpu=64),
     train=dict(
         type='Body3DH36MDataset',
-        ann_file=f'{data_root}/annotation_body3d/fps50/h36m_train.npz',
+        ann_file=f'{data_root}/annotations/h36m_train.npz',
         img_prefix=f'{data_root}/images/',
         data_cfg=data_cfg,
         pipeline=train_pipeline,

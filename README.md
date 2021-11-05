@@ -31,10 +31,14 @@ This project is released under the [Apache 2.0 license](./LICENSE).
 3. Object Pose Estimation
    + [x] DenseFusion
    + [ ] OMAD
-4. Hand-Object Manipulation
+4. Human Analyzers
+   + [x] HMR
+   + [x] SimpleBaseline3D
+   + [x] InterNet
    + [x] HandTailor
    + [ ] CPF
    + [ ] Artiboost
+   
 5. Multi-modality
 
 ## Installation
