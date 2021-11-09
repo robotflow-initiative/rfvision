@@ -1,7 +1,9 @@
 import cupy as cp
-
-rot_voting_kernel = cp.RawKernel(r'''
-    #include "/home/neil/ppf_matching/helper_math.cuh"
+import os
+# source of helper_math.cuh : https://github.com/NVIDIA/cuda-samples/blob/master/Common/helper_math.h
+abs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'helper_math.cuh')
+rot_voting_kernel = cp.RawKernel(
+    f'#include "{abs_path}"' + r'''
     #define M_PI 3.14159265358979323846264338327950288
     extern "C" __global__
     void rot_voting(
@@ -36,8 +38,8 @@ rot_voting_kernel = cp.RawKernel(r'''
     }
 ''', 'rot_voting')
 
-ppf_kernel = cp.RawKernel(r'''
-    #include "/home/neil/ppf_matching/helper_math.cuh"
+ppf_kernel = cp.RawKernel(
+    f'#include "{abs_path}"' + r'''
     #define M_PI 3.14159265358979323846264338327950288
     extern "C" __global__
     void ppf_voting(
@@ -99,8 +101,8 @@ ppf_kernel = cp.RawKernel(r'''
 ''', 'ppf_voting')
 
 
-backvote_kernel = cp.RawKernel(r'''
-    #include "/home/neil/ppf_matching/helper_math.cuh"
+backvote_kernel = cp.RawKernel(
+    f'#include "{abs_path}"' + r'''
     #define M_PI 3.14159265358979323846264338327950288
     extern "C" __global__
     void backvote(

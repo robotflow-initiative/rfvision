@@ -5,7 +5,7 @@ from rfvision.models.builder import DETECTORS
 from rfvision.models.human_analyzers import BasePose
 import numpy as np
 import cupy as cp
-import visdom as vis
+# import visdom
 from .voting import backvote_kernel, rot_voting_kernel
 from .utils import validation, visualize, fibonacci_sphere
 
@@ -36,6 +36,7 @@ class CategoryPPF(BasePose):
         self.n_threads = 512
         self.res = 0.005
         self.category = category
+        self.z_right = False
         ############### model init ###################
         self.point_encoder = PointEncoderRaw(k=self.knn, spfcs=[32, 64, 32, 32], num_layers=1, out_dim=32)
         self.ppf_encoder = PPFEncoder(ppffcs=[84, 32, 32, 16],
@@ -114,12 +115,13 @@ class CategoryPPF(BasePose):
         preds_tr[0, :, 1] = preds_tr[0, :, 1] / (self.tr_num_bins - 1) * self.tr_ranges[self.category][1]
 
         pc = pcs[0].cpu().numpy()
+        point_idxs = point_idxs.cpu().numpy()
         grid_obj, candidates = validation(pc, preds_tr[0].cpu().numpy(), np.ones((pc.shape[0],)), self.res, point_idxs,
-                                          point_idxs.shape[0], self.num_rots)
+                                          point_idxs.shape[0], self.num_rots, visualize=False)
 
         corners = np.stack([np.min(pc, 0), np.max(pc, 0)])
         T_est = candidates[-1]
-        T_gt = img_metas[0][''][:3, -1]
+        T_gt = img_metas[0]['RT'][:3, -1]
         T_err_sp = np.linalg.norm(T_est - T_gt)
         print('pred translation error: ', T_err_sp)
 
@@ -149,7 +151,7 @@ class CategoryPPF(BasePose):
         pc_idxs = pc_idxs[contrib_cnt > 175]
         mask = np.zeros((pc.shape[0],), bool)
         mask[pc_idxs] = True
-        visualize(vis, pc[~mask], pc[mask], win=10, opts=dict(markersize=3))
+        # visualize(vis, pc[~mask], pc[mask], win=10, opts=dict(markersize=3))
 
         # # rotation vote
         angle_tol = 2
@@ -208,7 +210,7 @@ class CategoryPPF(BasePose):
             ab = pc[point_idxs[:, 0]] - pc[point_idxs[:, 1]]
             distsq = np.sum(ab ** 2, -1)
             ab_normed = ab / (np.sqrt(distsq) + 1e-7)[..., None]
-            pc_normal = pc_normals.cpu.numpy()
+            pc_normal = pc_normals[0].cpu().numpy()
             pairwise_normals = pc_normal[point_idxs[:, 0]]
             pairwise_normals[np.sum(pairwise_normals * ab_normed, -1) < 0] *= -1
 
@@ -241,7 +243,7 @@ class CategoryPPF(BasePose):
         print('pred rotation error: ', rot_err)
 
         retrieved_pc = gt_pc @ R_est.T + T_est
-        visualize(vis, pc, retrieved_pc, win=8, opts=dict(markersize=3))
+        # visualize(vis, pc, retrieved_pc, win=8, opts=dict(markersize=3))
 
         print('pred scale: ', np.exp(preds_scale[0].mean(0).cpu().numpy()) * self.scale_ranges[self.category])
         print('gt scale', gt_pc.max(0))

@@ -1,10 +1,11 @@
 import numpy as np
-# import cupy as cp
+import cupy as cp
 from .voting import ppf_kernel
-import visdom as vis
+import visdom
 import cv2
 import math
 
+# vis = visdom.Visdom(server='10.52.28.4', port=22)
 
 def backproject(depth, intrinsics, instance_mask):
     intrinsics_inv = np.linalg.inv(intrinsics)
