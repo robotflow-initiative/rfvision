@@ -221,7 +221,7 @@ class NOCSForPPF(torch.utils.data.Dataset):
 
 
         # for i in tqdm(id_list):
-        for i in tqdm(['0000']):
+        for i in ['0000']:
             path = os.path.join(scene_dir, i)
             _, depth, masks, _, class_ids, _, infos, _, gt_RTs = self.read(path)
             pkl = pickle.load(open(os.path.join(self.data_root, log_dir, 'results_real_test_{}.pkl'.format('_'.join(path.split('/')[-2:]))), 'rb'))
