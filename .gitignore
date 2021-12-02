@@ -17,7 +17,7 @@ pddlstream/
 FastDownward/
 checkpoint/
 tmp/
-debug.py
+debug/debug.py
 temp/
 *.stl
 *.dae
@@ -42,3 +42,4 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+debug/

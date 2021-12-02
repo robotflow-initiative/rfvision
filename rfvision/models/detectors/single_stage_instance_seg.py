@@ -63,7 +63,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
     def forward_dummy(self, img):
         """Used for computing network flops.
 
-        See `rfvisionection/tools/analysis_tools/get_flops.py`
+        See `mmdetection/tools/analysis_tools/get_flops.py`
         """
         raise NotImplementedError(
             f'`forward_dummy` is not implemented in {self.__class__.__name__}')
@@ -84,7 +84,7 @@ class SingleStageInstanceSegmentor(BaseDetector):
                 has: 'img_shape', 'scale_factor', 'flip', and may also contain
                 'filename', 'ori_shape', 'pad_shape', and 'img_norm_cfg'.
                 For details on the values of these keys see
-                :class:`rfvision.datasets.pipelines.Collect`.
+                :class:`mmdet.datasets.pipelines.Collect`.
             gt_masks (list[:obj:`BitmapMasks`] | None) : The segmentation
                 masks for each box.
             gt_labels (list[Tensor]): Class indices corresponding to each box

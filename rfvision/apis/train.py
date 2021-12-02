@@ -54,7 +54,9 @@ def train_detector(model,
             # cfg.gpus will be ignored if distributed
             len(cfg.gpu_ids),
             dist=distributed,
-            seed=cfg.seed) for ds in dataset
+            seed=cfg.seed,
+            shuffle=cfg.get('shuffle', False)  # tycoer
+        ) for ds in dataset
     ]
 
     # put model on gpus

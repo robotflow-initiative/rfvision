@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image
 from trimesh.visual import TextureVisuals
 
-
 '''
 Due to redundant uvs in open3d, the file size of saved by o3d.io.write_triangle_mesh is 
 larger than the original one.

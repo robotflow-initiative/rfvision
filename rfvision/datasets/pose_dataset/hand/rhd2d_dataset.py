@@ -72,7 +72,7 @@ class Rhd2DDataset(Kpt2dSviewRgbImgTopDownDataset):
             cfg = Config.fromfile('configs/_base_/datasets/rhd2d.py')
             dataset_info = cfg._cfg_dict['dataset_info']
 
-        super().__init__(
+        super(Rhd2DDataset, self).__init__(
             ann_file,
             img_prefix,
             data_cfg,

@@ -16,10 +16,14 @@ from rfvision.apis import set_random_seed, train_detector
 from rfvision.datasets import build_dataset
 from rfvision.models import build_detector
 from rfvision.utils import collect_env, get_root_logger
-
+from rfvision.tools import init_constant_for_all
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
+    ############ tycoer ##############
+    parser.add_argument('--debug', help='if debug, training dataset shuffle=False, workers_per_gpu=0',
+                        action='store_true')
+    ##################################
     parser.add_argument('config', help='train config file path')
     parser.add_argument('--work-dir', help='the dir to save logs and models')
     parser.add_argument(
@@ -180,6 +184,13 @@ def main():
     else:
         cfg.checkpoint_config.meta = dict(
             rfvision_version=__version__ + get_git_hash()[:7])
+
+    # tycoer
+    if args.debug:
+        cfg.data.samples_per_gpu = 1
+        cfg.data.workers_per_gpu = 0
+        cfg.shuffle = False
+        init_constant_for_all(model, 0.001)
 
     train_detector(
         model,

@@ -220,11 +220,11 @@ class NOCSForPPF(torch.utils.data.Dataset):
 
 
 
-        # for i in tqdm(id_list):
-        for i in ['0000']:
+        for i in tqdm(id_list):
+        # for i in ['0000']:
             path = os.path.join(scene_dir, i)
             _, depth, masks, _, class_ids, _, infos, _, gt_RTs = self.read(path)
-            pkl = pickle.load(open(os.path.join(self.data_root, log_dir, 'results_real_test_{}.pkl'.format('_'.join(path.split('/')[-2:]))), 'rb'))
+            pkl = pickle.load(open(os.path.join(log_dir, 'results_real_test_{}.pkl'.format('_'.join(path.split('/')[-2:]))), 'rb'))
             pred_cls_ids = pkl['pred_class_ids']
             pred_masks = pkl['pred_masks']
             for (info, cls_id, mask, RT) in zip(infos, class_ids, masks, gt_RTs):
@@ -271,6 +271,11 @@ class NOCSForPPF(torch.utils.data.Dataset):
             return self.pipeline(out)
         else:
             return out
+
+
+    def evaluate(self,
+                 ):
+        pass
 
 
     def read(self, base_path):
@@ -413,23 +418,23 @@ class NOCSForPPF(torch.utils.data.Dataset):
 # mug
 # -0.12~0.12, 0~0.12, 0.06, 0.05, 0.045
 
-tr_ranges = {
-    1: [0.25, 0.25],
-    2: [0.12, 0.12],
-    3: [0.15, 0.15],
-    4: [0.1, 0.1],
-    5: [0.3, 0.3],
-    6: [0.12, 0.12]
-}
-
-scale_ranges = {
-    1: [0.05, 0.15, 0.05],
-    2: [0.07, 0.03, 0.07],
-    3: [0.05, 0.05, 0.07],
-    4: [0.037, 0.055, 0.037],
-    5: [0.13, 0.1, 0.15],
-    6: [0.06, 0.05, 0.045]
-}
+# tr_ranges = {
+#     1: [0.25, 0.25],
+#     2: [0.12, 0.12],
+#     3: [0.15, 0.15],
+#     4: [0.1, 0.1],
+#     5: [0.3, 0.3],
+#     6: [0.12, 0.12]
+# }
+#
+# scale_ranges = {
+#     1: [0.05, 0.15, 0.05],
+#     2: [0.07, 0.03, 0.07],
+#     3: [0.05, 0.05, 0.07],
+#     4: [0.037, 0.055, 0.037],
+#     5: [0.13, 0.1, 0.15],
+#     6: [0.06, 0.05, 0.045]
+# }
 
 
 def real2prob(val, max_val, num_bins, circular=False):

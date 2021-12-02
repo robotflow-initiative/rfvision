@@ -21,7 +21,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=0.001,
-    step=[])
+    step=[180, 200])
 total_epochs = 210
 
 log_config = dict(
@@ -152,10 +152,10 @@ val_pipeline = [
 
 test_pipeline = val_pipeline
 
-data_root = '/hdd0/data/rhd/RHD_published_v2'
+data_root = '/disk1/data/handdata/rhd/RHD_published_v2'
 data = dict(
-    samples_per_gpu=64,
-    workers_per_gpu=8,
+    samples_per_gpu=32,
+    workers_per_gpu=2,
     val_dataloader=dict(samples_per_gpu=16),
     test_dataloader=dict(samples_per_gpu=16),
     train=dict(

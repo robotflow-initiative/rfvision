@@ -3,7 +3,7 @@ import os
 
 from .scannet_data_utils import ScanNetData
 from .sunrgbd_data_utils import SUNRGBDData
-
+from .alfred_data_utils import AlfredData
 
 def create_indoor_info_file(data_path,
                             pkl_prefix='sunrgbd',
@@ -22,7 +22,7 @@ def create_indoor_info_file(data_path,
         workers (int): Number of threads to be used. Default: 4.
     """
     assert os.path.exists(data_path)
-    assert pkl_prefix in ['sunrgbd', 'scannet']
+    assert pkl_prefix in ['sunrgbd', 'scannet', 'alfred']
     save_path = data_path if save_path is None else save_path
     assert os.path.exists(save_path)
 
@@ -33,6 +33,13 @@ def create_indoor_info_file(data_path,
             root_path=data_path, split='train', use_v1=use_v1)
         val_dataset = SUNRGBDData(
             root_path=data_path, split='val', use_v1=use_v1)
+    elif pkl_prefix == 'alfred':
+        # Alfred has a train-val-test split
+        train_dataset = AlfredData(root_path=data_path, split='train')
+        val_dataset = AlfredData(root_path=data_path, split='val')
+        test_dataset = AlfredData(root_path=data_path, split='test')
+        test_filename = os.path.join(save_path,
+                                     f'{pkl_prefix}_infos_test.pkl')
     else:
         train_dataset = ScanNetData(root_path=data_path, split='train')
         val_dataset = ScanNetData(root_path=data_path, split='val')
@@ -44,3 +51,10 @@ def create_indoor_info_file(data_path,
     infos_val = val_dataset.get_infos(num_workers=workers, has_label=True)
     rflib.dump(infos_val, val_filename, 'pkl')
     print(f'{pkl_prefix} info val file is saved to {val_filename}')
+
+
+    if pkl_prefix in ['scannet', 'alfred']:
+        infos_test = test_dataset.get_infos(
+            num_workers=workers, has_label=False)
+        rflib.dump(infos_test, test_filename, 'pkl')
+        print(f'{pkl_prefix} info test file is saved to {test_filename}')

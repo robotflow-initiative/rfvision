@@ -1,9 +1,65 @@
 _base_ = [
-    '../_base_/datasets/coco_instance.py',
-    '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
+    '../_base_/schedules/schedule_1x.py'
 ]
 
 mask_size = 128
+# dataset settings
+dataset_type = 'CocoDataset'
+data_root = '/hdd0/data/coco/'
+
+
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True, with_mask=True),
+    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_masks']),
+]
+
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    # dict(type='Normalize', **img_norm_cfg),
+    # dict(type='Pad', size_divisor=32),
+    # dict(type='ImageToTensor', keys=['img']),
+    # dict(type='Collect', keys=['img']),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(1333, 800),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=True),
+            dict(type='RandomFlip'),
+            dict(type='Normalize', **img_norm_cfg),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img']),
+        ])
+]
+data = dict(
+    samples_per_gpu=8,
+    workers_per_gpu=0,
+    train=dict(
+        type=dataset_type,
+        ann_file=data_root + 'annotations/instances_train2017.json',
+        img_prefix=data_root + 'train2017/',
+        pipeline=train_pipeline),
+    val=dict(
+        type=dataset_type,
+        ann_file=data_root + 'annotations/instances_val2017.json',
+        img_prefix=data_root + 'val2017/',
+        pipeline=test_pipeline),
+    test=dict(
+        type=dataset_type,
+        ann_file=data_root + 'annotations/instances_val2017.json',
+        img_prefix=data_root + 'val2017/',
+        pipeline=test_pipeline))
+evaluation = dict(metric=['bbox', 'segm'])
+
 
 model = dict(
     type='MaskRCNN',
@@ -66,14 +122,14 @@ model = dict(
             featmap_strides=[4, 8, 16, 32]),
         mask_head=dict(
             type='MaskRCNNDCTHead',
-            num_convs=5,
+            num_convs=5, # in offical code num_convs=4 inside of 5
             in_channels=256,
             dct_vector_dim=300,
             mask_size=mask_size,
-            loss=dict(type='L1Loss', loss_weight=1.0),
-            class_agnostic=False,
+            dct_loss_type='l1',
+            mask_loss_para=0.007,
             conv_cfg=None,
-            norm_cfg=dict(type='BN', requires_grad=True),
+            norm_cfg=dict(type='BN', requires_grad=True),  # in offical code norm_cfg=None
             act_cfg=dict(type='ReLU'),
         )),
     # model training and testing settings
@@ -129,8 +185,20 @@ model = dict(
             max_per_img=100,
             mask_thr_binary=0.5)))
 
-data = dict(
-    samples_per_gpu=16,
-    workers_per_gpu=2,)
-
 find_unused_parameters = True
+checkpoint_config = dict(interval=1)
+# yapf:disable
+log_config = dict(
+    interval=50,
+    hooks=[
+        dict(type='TextLoggerHook'),
+        # dict(type='TensorboardLoggerHook')
+    ])
+# yapf:enable
+custom_hooks = [dict(type='NumClassCheckHook')]
+
+dist_params = dict(backend='nccl')
+log_level = 'INFO'
+load_from = None
+resume_from = None
+workflow = [('train', 1)]

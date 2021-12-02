@@ -1,9 +1,7 @@
-import warnings
-
 import torch.nn as nn
 from rflib.runner import BaseModule, auto_fp16
 
-from rfvision.components.backbones import ResNet
+from rfvision.components.backbones.resnet import ResNet
 from rfvision.models.builder import SHARED_HEADS
 from rfvision.components.utils import ResLayer as _ResLayer
 
