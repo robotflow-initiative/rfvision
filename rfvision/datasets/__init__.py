@@ -8,12 +8,14 @@ from .utils import (NumClassCheckHook, get_loading_pipeline,
                     replace_ImageToTensor)
 from .utils3d import (get_loading_pipeline_3d, is_loading_function, extract_result_dict)
 from .ik_dataset import IKDataset
-from .ycb_video import YCBVideoDataset
 from .arti import ArtiImgDataset, ArtiSynDataset, ArtiRealDataset
 from .sunrgbd_dataset import SUNRGBDDataset
 from .shapenet_v2 import ShapeNetCoreV2HDF5
 from .keypointnet import KeypointNetDataset
-from .pose_dataset import FreiHandDataset, DatasetInfo, InterHand3DDataset, Rhd2DDataset
+from .pose_dataset import DatasetInfo, InterHand3DDataset, Rhd2DDataset
+from .custom_dataset import *
+
+from .alfred_dataset import AlfredDataset
 
 __all__ = [
     'CustomDataset', 'CocoDataset', 'GroupSampler', 'DistributedGroupSampler',
@@ -25,5 +27,6 @@ __all__ = [
     'ArtiSynDataset', 'ArtiRealDataset', 'SUNRGBDDataset', 'ShapeNetCoreV2HDF5',
     'KeypointNetDataset',
     'get_loading_pipeline_3d', 'is_loading_function', 'extract_result_dict',
-    'DatasetInfo', 'InterHand3DDataset', 'Rhd2DDataset'
+    'DatasetInfo', 'InterHand3DDataset', 'Rhd2DDataset',
+    'AlfredDataset'
 ]

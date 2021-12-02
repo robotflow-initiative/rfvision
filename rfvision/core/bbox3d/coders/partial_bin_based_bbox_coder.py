@@ -217,6 +217,7 @@ class PartialBinBasedBBoxCoder(BaseBBoxCoder):
         angle_per_class = 2 * np.pi / float(self.num_dir_bins)
         shifted_angle = (angle + angle_per_class / 2) % (2 * np.pi)
         angle_cls = shifted_angle // angle_per_class
+        # angle_cls = torch.div(shifted_angle, angle_per_class, rounding_mode='floor')
         angle_res = shifted_angle - (
             angle_cls * angle_per_class + angle_per_class / 2)
         return angle_cls.long(), angle_res

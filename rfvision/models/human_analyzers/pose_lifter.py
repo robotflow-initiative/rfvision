@@ -51,7 +51,7 @@ class PoseLifter(BasePose):
                  loss_semi=None,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None):
+                 init_cfg=None):
         super().__init__()
         self.fp16_enabled = False
 
@@ -87,7 +87,7 @@ class PoseLifter(BasePose):
             assert keypoint_head is not None and traj_head is not None
             self.loss_semi = builder.build_loss(loss_semi)
 
-        self.init_weights(pretrained=pretrained)
+        # self.init_weights(pretrained=pretrained)
 
     @property
     def with_neck(self):
@@ -123,19 +123,19 @@ class PoseLifter(BasePose):
                                  'the bool attribute "causal" to indicate if'
                                  'it performs causal inference.')
 
-    def init_weights(self, pretrained=None):
-        """Weight initialization for model."""
-        self.backbone.init_weights(pretrained)
-        if self.with_neck:
-            self.neck.init_weights()
-        if self.with_keypoint:
-            self.keypoint_head.init_weights()
-        if self.with_traj_backbone:
-            self.traj_backbone.init_weights(pretrained)
-        if self.with_traj_neck:
-            self.traj_neck.init_weights()
-        if self.with_traj:
-            self.traj_head.init_weights()
+    # def init_weights(self, pretrained=None):
+    #     """Weight initialization for model."""
+    #     self.backbone.init_weights(pretrained)
+    #     if self.with_neck:
+    #         self.neck.init_weights()
+    #     if self.with_keypoint:
+    #         self.keypoint_head.init_weights()
+    #     if self.with_traj_backbone:
+    #         self.traj_backbone.init_weights(pretrained)
+    #     if self.with_traj_neck:
+    #         self.traj_neck.init_weights()
+    #     if self.with_traj:
+    #         self.traj_head.init_weights()
 
     @auto_fp16(apply_to=('input', ))
     def forward(self,

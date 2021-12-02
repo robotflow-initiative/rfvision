@@ -28,13 +28,8 @@ class Topdown3DHeatmapSimpleHead(BaseModule):
         self.hand_head = Heatmap3DHead(**keypoint_head_cfg)
         self.root_head = Heatmap1DHead(**root_head_cfg)
 
-        if hand_type_head_cfg is not None:
-            self.with_hand_type_head = True
-            self.hand_type_head = MultilabelClassificationHead(
-                **hand_type_head_cfg)
-        else:
-            self.with_hand_type_head = False
-
+        self.hand_type_head = MultilabelClassificationHead(
+            **hand_type_head_cfg)
         self.neck = GlobalAveragePooling()
 
         self.keypoint_loss = build_loss(loss_keypoint)
@@ -80,25 +75,23 @@ class Topdown3DHeatmapSimpleHead(BaseModule):
         losses['rel_root_loss'] = self.root_depth_loss(out, tar, tar_weight)
 
         # hand type loss
-        if self.with_hand_type_head:
-            assert not isinstance(self.hand_type_loss, nn.Sequential)
-            out, tar, tar_weight = output[2], target[2], target_weight[2]
-            assert tar.dim() == 2 and tar_weight.dim() in [1, 2]
-            losses['hand_type_loss'] = self.hand_type_loss(out, tar, tar_weight)
+        assert not isinstance(self.hand_type_loss, nn.Sequential)
+        out, tar, tar_weight = output[2], target[2], target_weight[2]
+        assert tar.dim() == 2 and tar_weight.dim() in [1, 2]
+        losses['hand_type_loss'] = self.hand_type_loss(out, tar, tar_weight)
 
         return losses
 
     def get_accuracy(self, output, target, target_weight):
-        if self.with_hand_type_head:
-            accuracy = dict()
-            avg_acc = multilabel_classification_accuracy(
-                output[2].detach().cpu().numpy(),
-                target[2].detach().cpu().numpy(),
-                target_weight[2].detach().cpu().numpy(),
-            )
-            accuracy['acc_classification'] = float(avg_acc)
-        else:
-            pass
+        accuracy = dict()
+        avg_acc = multilabel_classification_accuracy(
+            output[2].detach().cpu().numpy(),
+            target[2].detach().cpu().numpy(),
+            target_weight[2].detach().cpu().numpy(),
+        )
+        accuracy['acc_classification'] = float(avg_acc)
+        return accuracy
+
 
 
     def inference_model(self, x, flip_pairs=None):

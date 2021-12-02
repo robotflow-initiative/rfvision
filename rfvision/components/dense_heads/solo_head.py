@@ -1,602 +1,1177 @@
+# Copyright (c) OpenMMLab. All rights reserved.
+import rflib
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from rflib import imrescale
-from rflib.runner import BaseModule
-from rflib.cnn import normal_init, bias_init_with_prob, ConvModule
-from rfvision.core import multi_apply, matrix_nms
-from rfvision.models.builder import HEADS
-import torch
-from rfvision.models.builder import build_loss
+from rflib.cnn import ConvModule
 
-
-INF = 1e8
-
-def center_of_mass(bitmasks):
-    _, h, w = bitmasks.size()
-    ys = torch.arange(0, h, dtype=torch.float32, device=bitmasks.device)
-    xs = torch.arange(0, w, dtype=torch.float32, device=bitmasks.device)
-
-    m00 = bitmasks.sum(dim=-1).sum(dim=-1).clamp(min=1e-6)
-    m10 = (bitmasks * xs).sum(dim=-1).sum(dim=-1)
-    m01 = (bitmasks * ys[:, None]).sum(dim=-1).sum(dim=-1)
-    center_x = m10 / m00
-    center_y = m01 / m00
-    return center_x, center_y
-
-
-def points_nms(heat, kernel=2):
-    # kernel must be 2
-    hmax = nn.functional.max_pool2d(
-        heat, (kernel, kernel), stride=1, padding=1)
-    keep = (hmax[:, :, :-1, :-1] == heat).float()
-    return heat * keep
-
-
-def dice_loss(input, target):
-    input = input.contiguous().view(input.size()[0], -1)
-    target = target.contiguous().view(target.size()[0], -1).float()
-
-    a = torch.sum(input * target, 1)
-    b = torch.sum(input * input, 1) + 0.001
-    c = torch.sum(target * target, 1) + 0.001
-    d = (2 * a) / (b + c)
-    return 1 - d
+from rfvision.core import InstanceData, mask_matrix_nms, multi_apply
+from rfvision.core.utils import center_of_mass, generate_coordinate
+from rfvision.models.builder import HEADS, build_loss
+from .base_mask_head import BaseMaskHead
 
 
 @HEADS.register_module()
-class SOLOv2Head(BaseModule):
-    '''
-    This implementation is modified from https://github.com/WXinlong/SOLO
-    (Only has slight modifications to fit the new attributes of rfvision)
-    '''
-    def __init__(self,
-                 num_classes,
-                 in_channels,
-                 seg_feat_channels=256,
-                 stacked_convs=4,
-                 strides=(4, 8, 16, 32, 64),
-                 base_edge_list=(16, 32, 64, 128, 256),
-                 scale_ranges=((8, 32), (16, 64), (32, 128), (64, 256), (128, 512)),
-                 sigma=0.2,
-                 num_grids=None,
-                 ins_out_channels=64,
-                 loss_ins=None,
-                 loss_cate=None,
-                 conv_cfg=None,
-                 norm_cfg=None,
-                 use_dcn_in_tower=False,
-                 type_dcn=None,
-                 init_cfg=None):
-        super(SOLOv2Head, self).__init__(init_cfg=init_cfg)
+class SOLOHead(BaseMaskHead):
+    """SOLO mask head used in `SOLO: Segmenting Objects by Locations.
+
+    <https://arxiv.org/abs/1912.04488>`_
+
+    Args:
+        num_classes (int): Number of categories excluding the background
+            category.
+        in_channels (int): Number of channels in the input feature map.
+        feat_channels (int): Number of hidden channels. Used in child classes.
+            Default: 256.
+        stacked_convs (int): Number of stacking convs of the head.
+            Default: 4.
+        strides (tuple): Downsample factor of each feature map.
+        scale_ranges (tuple[tuple[int, int]]): Area range of multiple
+            level masks, in the format [(min1, max1), (min2, max2), ...].
+            A range of (16, 64) means the area range between (16, 64).
+        pos_scale (float): Constant scale factor to control the center region.
+        num_grids (list[int]): Divided image into a uniform grids, each
+            feature map has a different grid value. The number of output
+            channels is grid ** 2. Default: [40, 36, 24, 16, 12].
+        cls_down_index (int): The index of downsample operation in
+            classification branch. Default: 0.
+        loss_mask (dict): Config of mask loss.
+        loss_cls (dict): Config of classification loss.
+        norm_cfg (dict): dictionary to construct and config norm layer.
+            Default: norm_cfg=dict(type='GN', num_groups=32,
+                                   requires_grad=True).
+        train_cfg (dict): Training config of head.
+        test_cfg (dict): Testing config of head.
+        init_cfg (dict or list[dict], optional): Initialization config dict.
+    """
+
+    def __init__(
+        self,
+        num_classes,
+        in_channels,
+        feat_channels=256,
+        stacked_convs=4,
+        strides=(4, 8, 16, 32, 64),
+        scale_ranges=((8, 32), (16, 64), (32, 128), (64, 256), (128, 512)),
+        pos_scale=0.2,
+        num_grids=[40, 36, 24, 16, 12],
+        cls_down_index=0,
+        loss_mask=None,
+        loss_cls=None,
+        norm_cfg=dict(type='GN', num_groups=32, requires_grad=True),
+        train_cfg=None,
+        test_cfg=None,
+        init_cfg=[
+            dict(type='Normal', layer='Conv2d', std=0.01),
+            dict(
+                type='Normal',
+                std=0.01,
+                bias_prob=0.01,
+                override=dict(name='conv_mask_list')),
+            dict(
+                type='Normal',
+                std=0.01,
+                bias_prob=0.01,
+                override=dict(name='conv_cls'))
+        ],
+    ):
+        super(SOLOHead, self).__init__(init_cfg)
         self.num_classes = num_classes
-        self.seg_num_grids = num_grids
-        self.cate_out_channels = self.num_classes - 1
-        self.ins_out_channels = ins_out_channels
+        self.cls_out_channels = self.num_classes
         self.in_channels = in_channels
-        self.seg_feat_channels = seg_feat_channels
+        self.feat_channels = feat_channels
         self.stacked_convs = stacked_convs
         self.strides = strides
-        self.sigma = sigma
-        self.stacked_convs = stacked_convs
-        self.kernel_out_channels = self.ins_out_channels * 1 * 1
-        self.base_edge_list = base_edge_list
+        self.num_grids = num_grids
+        # number of FPN feats
+        self.num_levels = len(strides)
+        assert self.num_levels == len(scale_ranges) == len(num_grids)
         self.scale_ranges = scale_ranges
-        self.loss_cate = build_loss(loss_cate)
-        self.ins_loss_weight = loss_ins['loss_weight']
-        self.conv_cfg = conv_cfg
+        self.pos_scale = pos_scale
+
+        self.cls_down_index = cls_down_index
+        self.loss_cls = build_loss(loss_cls)
+        self.loss_mask = build_loss(loss_mask)
         self.norm_cfg = norm_cfg
-        self.use_dcn_in_tower = use_dcn_in_tower
-        self.type_dcn = type_dcn
+        self.init_cfg = init_cfg
+        self.train_cfg = train_cfg
+        self.test_cfg = test_cfg
         self._init_layers()
 
     def _init_layers(self):
-        norm_cfg = dict(type='GN', num_groups=32, requires_grad=True)
-        self.cate_convs = nn.ModuleList()
-        self.kernel_convs = nn.ModuleList()
+        self.mask_convs = nn.ModuleList()
+        self.cls_convs = nn.ModuleList()
         for i in range(self.stacked_convs):
-            if self.use_dcn_in_tower:
-                cfg_conv = dict(type=self.type_dcn)
+            chn = self.in_channels + 2 if i == 0 else self.feat_channels
+            self.mask_convs.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    norm_cfg=self.norm_cfg))
+            chn = self.in_channels if i == 0 else self.feat_channels
+            self.cls_convs.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    norm_cfg=self.norm_cfg))
+        self.conv_mask_list = nn.ModuleList()
+        for num_grid in self.num_grids:
+            self.conv_mask_list.append(
+                nn.Conv2d(self.feat_channels, num_grid**2, 1))
+
+        self.conv_cls = nn.Conv2d(
+            self.feat_channels, self.cls_out_channels, 3, padding=1)
+
+    def resize_feats(self, feats):
+        """Downsample the first feat and upsample last feat in feats."""
+        out = []
+        for i in range(len(feats)):
+            if i == 0:
+                out.append(
+                    F.interpolate(feats[0], scale_factor=0.5, mode='bilinear'))
+            elif i == len(feats) - 1:
+                out.append(
+                    F.interpolate(
+                        feats[i],
+                        size=feats[i - 1].shape[-2:],
+                        mode='bilinear'))
             else:
-                cfg_conv = self.conv_cfg
+                out.append(feats[i])
+        return out
 
-            chn = self.in_channels + 2 if i == 0 else self.seg_feat_channels
-            self.kernel_convs.append(
-                ConvModule(
-                    chn,
-                    self.seg_feat_channels,
-                    3,
-                    stride=1,
-                    padding=1,
-                    conv_cfg=cfg_conv,
-                    norm_cfg=norm_cfg,
-                    bias=norm_cfg is None))
+    def forward(self, feats):
+        assert len(feats) == self.num_levels
+        feats = self.resize_feats(feats)
+        mlvl_mask_preds = []
+        mlvl_cls_preds = []
+        for i in range(self.num_levels):
+            x = feats[i]
+            mask_feat = x
+            cls_feat = x
+            # generate and concat the coordinate
+            coord_feat = generate_coordinate(mask_feat.size(),
+                                             mask_feat.device)
+            mask_feat = torch.cat([mask_feat, coord_feat], 1)
 
-            chn = self.in_channels if i == 0 else self.seg_feat_channels
-            self.cate_convs.append(
-                ConvModule(
-                    chn,
-                    self.seg_feat_channels,
-                    3,
-                    stride=1,
-                    padding=1,
-                    conv_cfg=cfg_conv,
-                    norm_cfg=norm_cfg,
-                    bias=norm_cfg is None))
+            for mask_layer in (self.mask_convs):
+                mask_feat = mask_layer(mask_feat)
 
-        self.solo_cate = nn.Conv2d(
-            self.seg_feat_channels, self.cate_out_channels, 3, padding=1)
+            mask_feat = F.interpolate(
+                mask_feat, scale_factor=2, mode='bilinear')
+            mask_pred = self.conv_mask_list[i](mask_feat)
 
-        self.solo_kernel = nn.Conv2d(
-            self.seg_feat_channels, self.kernel_out_channels, 3, padding=1)
+            # cls branch
+            for j, cls_layer in enumerate(self.cls_convs):
+                if j == self.cls_down_index:
+                    num_grid = self.num_grids[i]
+                    cls_feat = F.interpolate(
+                        cls_feat, size=num_grid, mode='bilinear')
+                cls_feat = cls_layer(cls_feat)
 
-    def init_weights(self):
-        for m in self.cate_convs:
-            normal_init(m.conv, std=0.01)
-        for m in self.kernel_convs:
-            normal_init(m.conv, std=0.01)
-        bias_cate = bias_init_with_prob(0.01)
-        normal_init(self.solo_cate, std=0.01, bias=bias_cate)
-        normal_init(self.solo_kernel, std=0.01)
+            cls_pred = self.conv_cls(cls_feat)
 
-    def forward(self, feats, eval=False):
-        new_feats = self.split_feats(feats)
-        featmap_sizes = [featmap.size()[-2:] for featmap in new_feats]
-        upsampled_size = (featmap_sizes[0][0] * 2, featmap_sizes[0][1] * 2)
-        cate_pred, kernel_pred = multi_apply(self.forward_single, new_feats,
-                                             list(range(len(self.seg_num_grids))),
-                                             eval=eval, upsampled_size=upsampled_size)
-        return cate_pred, kernel_pred
+            if not self.training:
+                feat_wh = feats[0].size()[-2:]
+                upsampled_size = (feat_wh[0] * 2, feat_wh[1] * 2)
+                mask_pred = F.interpolate(
+                    mask_pred.sigmoid(), size=upsampled_size, mode='bilinear')
+                cls_pred = cls_pred.sigmoid()
+                # get local maximum
+                local_max = F.max_pool2d(cls_pred, 2, stride=1, padding=1)
+                keep_mask = local_max[:, :, :-1, :-1] == cls_pred
+                cls_pred = cls_pred * keep_mask
 
-    def split_feats(self, feats):
-        return (F.interpolate(feats[0], scale_factor=0.5, mode='bilinear'),
-                feats[1],
-                feats[2],
-                feats[3],
-                F.interpolate(feats[4], size=feats[3].shape[-2:], mode='bilinear'))
-
-    def forward_single(self, x, idx, eval=False, upsampled_size=None):
-        ins_kernel_feat = x
-        # ins branch
-        # concat coord
-        x_range = torch.linspace(-1, 1, ins_kernel_feat.shape[-1], device=ins_kernel_feat.device)
-        y_range = torch.linspace(-1, 1, ins_kernel_feat.shape[-2], device=ins_kernel_feat.device)
-        y, x = torch.meshgrid(y_range, x_range)
-        y = y.expand([ins_kernel_feat.shape[0], 1, -1, -1])
-        x = x.expand([ins_kernel_feat.shape[0], 1, -1, -1])
-        coord_feat = torch.cat([x, y], 1)
-        ins_kernel_feat = torch.cat([ins_kernel_feat, coord_feat], 1)
-
-        # kernel branch
-        kernel_feat = ins_kernel_feat
-        seg_num_grid = self.seg_num_grids[idx]
-        kernel_feat = F.interpolate(kernel_feat, size=seg_num_grid, mode='bilinear')
-
-        cate_feat = kernel_feat[:, :-2, :, :]
-
-        kernel_feat = kernel_feat.contiguous()
-        for i, kernel_layer in enumerate(self.kernel_convs):
-            kernel_feat = kernel_layer(kernel_feat)
-        kernel_pred = self.solo_kernel(kernel_feat)
-
-        # cate branch
-        cate_feat = cate_feat.contiguous()
-        for i, cate_layer in enumerate(self.cate_convs):
-            cate_feat = cate_layer(cate_feat)
-        cate_pred = self.solo_cate(cate_feat)
-
-        if eval:
-            cate_pred = points_nms(cate_pred.sigmoid(), kernel=2).permute(0, 2, 3, 1)
-        return cate_pred, kernel_pred
+            mlvl_mask_preds.append(mask_pred)
+            mlvl_cls_preds.append(cls_pred)
+        return mlvl_mask_preds, mlvl_cls_preds
 
     def loss(self,
-             cate_preds,
-             kernel_preds,
-             ins_pred,
-             gt_bbox_list,
-             gt_label_list,
-             gt_mask_list,
+             mlvl_mask_preds,
+             mlvl_cls_preds,
+             gt_labels,
+             gt_masks,
              img_metas,
-             cfg,
-             gt_bboxes_ignore=None):
-        mask_feat_size = ins_pred.size()[-2:]
-        ins_label_list, cate_label_list, ins_ind_label_list, grid_order_list = multi_apply(
-            self.solov2_target_single,
-            gt_bbox_list,
-            gt_label_list,
-            gt_mask_list,
-            mask_feat_size=mask_feat_size)
+             gt_bboxes=None,
+             **kwargs):
+        """Calculate the loss of total batch.
 
-        # ins
-        ins_labels = [torch.cat([ins_labels_level_img
-                                 for ins_labels_level_img in ins_labels_level], 0)
-                      for ins_labels_level in zip(*ins_label_list)]
+        Args:
+            mlvl_mask_preds (list[Tensor]): Multi-level mask prediction.
+                Each element in the list has shape
+                (batch_size, num_grids**2 ,h ,w).
+            mlvl_cls_preds (list[Tensor]): Multi-level scores. Each element
+                in the list has shape
+                (batch_size, num_classes, num_grids ,num_grids).
+            gt_labels (list[Tensor]): Labels of multiple images.
+            gt_masks (list[Tensor]): Ground truth masks of multiple images.
+                Each has shape (num_instances, h, w).
+            img_metas (list[dict]): Meta information of multiple images.
+            gt_bboxes (list[Tensor]): Ground truth bboxes of multiple
+                images. Default: None.
 
-        kernel_preds = [[kernel_preds_level_img.view(kernel_preds_level_img.shape[0], -1)[:, grid_orders_level_img]
-                         for kernel_preds_level_img, grid_orders_level_img in
-                         zip(kernel_preds_level, grid_orders_level)]
-                        for kernel_preds_level, grid_orders_level in zip(kernel_preds, zip(*grid_order_list))]
-        # generate masks
-        ins_pred = ins_pred
-        ins_pred_list = []
-        for b_kernel_pred in kernel_preds:
-            b_mask_pred = []
-            for idx, kernel_pred in enumerate(b_kernel_pred):
+        Returns:
+            dict[str, Tensor]: A dictionary of loss components.
+        """
+        num_levels = self.num_levels
+        num_imgs = len(gt_labels)
 
-                if kernel_pred.size()[-1] == 0:
-                    continue
-                cur_ins_pred = ins_pred[idx, ...]
-                H, W = cur_ins_pred.shape[-2:]
-                N, I = kernel_pred.shape
-                cur_ins_pred = cur_ins_pred.unsqueeze(0)
-                kernel_pred = kernel_pred.permute(1, 0).view(I, -1, 1, 1)
-                cur_ins_pred = F.conv2d(cur_ins_pred, kernel_pred, stride=1).view(-1, H, W)
-                b_mask_pred.append(cur_ins_pred)
-            if len(b_mask_pred) == 0:
-                b_mask_pred = None
-            else:
-                b_mask_pred = torch.cat(b_mask_pred, 0)
-            ins_pred_list.append(b_mask_pred)
+        featmap_sizes = [featmap.size()[-2:] for featmap in mlvl_mask_preds]
 
-        ins_ind_labels = [
-            torch.cat([ins_ind_labels_level_img.flatten()
-                       for ins_ind_labels_level_img in ins_ind_labels_level])
-            for ins_ind_labels_level in zip(*ins_ind_label_list)
-        ]
-        flatten_ins_ind_labels = torch.cat(ins_ind_labels)
+        # `BoolTensor` in `pos_masks` represent
+        # whether the corresponding point is
+        # positive
+        pos_mask_targets, labels, pos_masks = multi_apply(
+            self._get_targets_single,
+            gt_bboxes,
+            gt_labels,
+            gt_masks,
+            featmap_sizes=featmap_sizes)
 
-        num_ins = flatten_ins_ind_labels.sum()
+        # change from the outside list meaning multi images
+        # to the outside list meaning multi levels
+        mlvl_pos_mask_targets = [[] for _ in range(num_levels)]
+        mlvl_pos_mask_preds = [[] for _ in range(num_levels)]
+        mlvl_pos_masks = [[] for _ in range(num_levels)]
+        mlvl_labels = [[] for _ in range(num_levels)]
+        for img_id in range(num_imgs):
+            assert num_levels == len(pos_mask_targets[img_id])
+            for lvl in range(num_levels):
+                mlvl_pos_mask_targets[lvl].append(
+                    pos_mask_targets[img_id][lvl])
+                mlvl_pos_mask_preds[lvl].append(
+                    mlvl_mask_preds[lvl][img_id, pos_masks[img_id][lvl], ...])
+                mlvl_pos_masks[lvl].append(pos_masks[img_id][lvl].flatten())
+                mlvl_labels[lvl].append(labels[img_id][lvl].flatten())
 
+        # cat multiple image
+        temp_mlvl_cls_preds = []
+        for lvl in range(num_levels):
+            mlvl_pos_mask_targets[lvl] = torch.cat(
+                mlvl_pos_mask_targets[lvl], dim=0)
+            mlvl_pos_mask_preds[lvl] = torch.cat(
+                mlvl_pos_mask_preds[lvl], dim=0)
+            mlvl_pos_masks[lvl] = torch.cat(mlvl_pos_masks[lvl], dim=0)
+            mlvl_labels[lvl] = torch.cat(mlvl_labels[lvl], dim=0)
+            temp_mlvl_cls_preds.append(mlvl_cls_preds[lvl].permute(
+                0, 2, 3, 1).reshape(-1, self.cls_out_channels))
+
+        num_pos = sum(item.sum() for item in mlvl_pos_masks)
         # dice loss
-        loss_ins = []
-        for input, target in zip(ins_pred_list, ins_labels):
-            if input is None:
+        loss_mask = []
+        for pred, target in zip(mlvl_pos_mask_preds, mlvl_pos_mask_targets):
+            if pred.size()[0] == 0:
+                loss_mask.append(pred.sum().unsqueeze(0))
                 continue
-            input = torch.sigmoid(input)
-            loss_ins.append(dice_loss(input, target))
-        loss_ins = torch.cat(loss_ins).mean()
-        loss_ins = loss_ins * self.ins_loss_weight
+            loss_mask.append(
+                self.loss_mask(pred, target, reduction_override='none'))
+        if num_pos > 0:
+            loss_mask = torch.cat(loss_mask).sum() / num_pos
+        else:
+            loss_mask = torch.cat(loss_mask).mean()
 
-        # cate
-        cate_labels = [
-            torch.cat([cate_labels_level_img.flatten()
-                       for cate_labels_level_img in cate_labels_level])
-            for cate_labels_level in zip(*cate_label_list)
-        ]
-        flatten_cate_labels = torch.cat(cate_labels)
+        flatten_labels = torch.cat(mlvl_labels)
+        flatten_cls_preds = torch.cat(temp_mlvl_cls_preds)
+        loss_cls = self.loss_cls(
+            flatten_cls_preds, flatten_labels, avg_factor=num_pos + 1)
+        return dict(loss_mask=loss_mask, loss_cls=loss_cls)
 
-        cate_preds = [
-            cate_pred.permute(0, 2, 3, 1).reshape(-1, self.cate_out_channels)
-            for cate_pred in cate_preds
-        ]
-        flatten_cate_preds = torch.cat(cate_preds)
+    def _get_targets_single(self,
+                            gt_bboxes,
+                            gt_labels,
+                            gt_masks,
+                            featmap_sizes=None):
+        """Compute targets for predictions of single image.
 
-        loss_cate = self.loss_cate(flatten_cate_preds, flatten_cate_labels, avg_factor=num_ins + 1)
-        return dict(
-            loss_ins=loss_ins,
-            loss_cate=loss_cate)
+        Args:
+            gt_bboxes (Tensor): Ground truth bbox of each instance,
+                shape (num_gts, 4).
+            gt_labels (Tensor): Ground truth label of each instance,
+                shape (num_gts,).
+            gt_masks (Tensor): Ground truth mask of each instance,
+                shape (num_gts, h, w).
+            featmap_sizes (list[:obj:`torch.size`]): Size of each
+                feature map from feature pyramid, each element
+                means (feat_h, feat_w). Default: None.
 
-    def solov2_target_single(self,
-                             gt_bboxes_raw,
-                             gt_labels_raw,
-                             gt_masks_raw,
-                             mask_feat_size):
+        Returns:
+            Tuple: Usually returns a tuple containing targets for predictions.
 
-        device = gt_labels_raw[0].device
+                - mlvl_pos_mask_targets (list[Tensor]): Each element represent
+                  the binary mask targets for positive points in this
+                  level, has shape (num_pos, out_h, out_w).
+                - mlvl_labels (list[Tensor]): Each element is
+                  classification labels for all
+                  points in this level, has shape
+                  (num_grid, num_grid).
+                - mlvl_pos_masks (list[Tensor]): Each element is
+                  a `BoolTensor` to represent whether the
+                  corresponding point in single level
+                  is positive, has shape (num_grid **2).
+        """
+        device = gt_labels.device
+        gt_areas = torch.sqrt((gt_bboxes[:, 2] - gt_bboxes[:, 0]) *
+                              (gt_bboxes[:, 3] - gt_bboxes[:, 1]))
 
-        # ins
-        gt_areas = torch.sqrt((gt_bboxes_raw[:, 2] - gt_bboxes_raw[:, 0]) * (
-                gt_bboxes_raw[:, 3] - gt_bboxes_raw[:, 1]))
+        mlvl_pos_mask_targets = []
+        mlvl_labels = []
+        mlvl_pos_masks = []
+        for (lower_bound, upper_bound), stride, featmap_size, num_grid \
+                in zip(self.scale_ranges, self.strides,
+                       featmap_sizes, self.num_grids):
 
-        ins_label_list = []
-        cate_label_list = []
-        ins_ind_label_list = []
-        grid_order_list = []
-        for (lower_bound, upper_bound), stride, num_grid \
-                in zip(self.scale_ranges, self.strides, self.seg_num_grids):
+            mask_target = torch.zeros(
+                [num_grid**2, featmap_size[0], featmap_size[1]],
+                dtype=torch.uint8,
+                device=device)
+            # FG cat_id: [0, num_classes -1], BG cat_id: num_classes
+            labels = torch.zeros([num_grid, num_grid],
+                                 dtype=torch.int64,
+                                 device=device) + self.num_classes
+            pos_mask = torch.zeros([num_grid**2],
+                                   dtype=torch.bool,
+                                   device=device)
 
-            hit_indices = ((gt_areas >= lower_bound) & (gt_areas <= upper_bound)).nonzero().flatten()
-            num_ins = len(hit_indices)
-
-            ins_label = []
-            grid_order = []
-            cate_label = torch.zeros([num_grid, num_grid], dtype=torch.int64, device=device)
-            ins_ind_label = torch.zeros([num_grid ** 2], dtype=torch.bool, device=device)
-
-            if num_ins == 0:
-                ins_label = torch.zeros([0, mask_feat_size[0], mask_feat_size[1]], dtype=torch.uint8, device=device)
-                ins_label_list.append(ins_label)
-                cate_label_list.append(cate_label)
-                ins_ind_label_list.append(ins_ind_label)
-                grid_order_list.append([])
+            gt_inds = ((gt_areas >= lower_bound) &
+                       (gt_areas <= upper_bound)).nonzero().flatten()
+            if len(gt_inds) == 0:
+                mlvl_pos_mask_targets.append(
+                    mask_target.new_zeros(0, featmap_size[0], featmap_size[1]))
+                mlvl_labels.append(labels)
+                mlvl_pos_masks.append(pos_mask)
                 continue
-            gt_bboxes = gt_bboxes_raw[hit_indices]
-            gt_labels = gt_labels_raw[hit_indices]
-            gt_masks = gt_masks_raw[hit_indices.cpu().numpy(), ...]
+            hit_gt_bboxes = gt_bboxes[gt_inds]
+            hit_gt_labels = gt_labels[gt_inds]
+            hit_gt_masks = gt_masks[gt_inds, ...]
 
-            half_ws = 0.5 * (gt_bboxes[:, 2] - gt_bboxes[:, 0]) * self.sigma
-            half_hs = 0.5 * (gt_bboxes[:, 3] - gt_bboxes[:, 1]) * self.sigma
+            pos_w_ranges = 0.5 * (hit_gt_bboxes[:, 2] -
+                                  hit_gt_bboxes[:, 0]) * self.pos_scale
+            pos_h_ranges = 0.5 * (hit_gt_bboxes[:, 3] -
+                                  hit_gt_bboxes[:, 1]) * self.pos_scale
 
-            # mass center
-            gt_masks_pt = gt_masks.to_tensor(device=device, dtype=torch.float32)
-            center_ws, center_hs = center_of_mass(gt_masks_pt)
-            valid_mask_flags = gt_masks_pt.sum(dim=-1).sum(dim=-1) > 0
+            # Make sure hit_gt_masks has a value
+            valid_mask_flags = hit_gt_masks.sum(dim=-1).sum(dim=-1) > 0
+            output_stride = stride / 2
 
-            output_stride = 4
-            for seg_mask, gt_label, half_h, half_w, center_h, center_w, valid_mask_flag in zip(gt_masks, gt_labels,
-                                                                                               half_hs, half_ws,
-                                                                                               center_hs, center_ws,
-                                                                                               valid_mask_flags):
+            for gt_mask, gt_label, pos_h_range, pos_w_range, \
+                valid_mask_flag in \
+                    zip(hit_gt_masks, hit_gt_labels, pos_h_ranges,
+                        pos_w_ranges, valid_mask_flags):
                 if not valid_mask_flag:
                     continue
-                upsampled_size = (mask_feat_size[0] * 4, mask_feat_size[1] * 4)
-                coord_w = int((center_w / upsampled_size[1]) // (1. / num_grid))
-                coord_h = int((center_h / upsampled_size[0]) // (1. / num_grid))
+                upsampled_size = (featmap_sizes[0][0] * 4,
+                                  featmap_sizes[0][1] * 4)
+                center_h, center_w = center_of_mass(gt_mask)
+
+                coord_w = int(
+                    (center_w / upsampled_size[1]) // (1. / num_grid))
+                coord_h = int(
+                    (center_h / upsampled_size[0]) // (1. / num_grid))
 
                 # left, top, right, down
-                top_box = max(0, int(((center_h - half_h) / upsampled_size[0]) // (1. / num_grid)))
-                down_box = min(num_grid - 1, int(((center_h + half_h) / upsampled_size[0]) // (1. / num_grid)))
-                left_box = max(0, int(((center_w - half_w) / upsampled_size[1]) // (1. / num_grid)))
-                right_box = min(num_grid - 1, int(((center_w + half_w) / upsampled_size[1]) // (1. / num_grid)))
+                top_box = max(
+                    0,
+                    int(((center_h - pos_h_range) / upsampled_size[0]) //
+                        (1. / num_grid)))
+                down_box = min(
+                    num_grid - 1,
+                    int(((center_h + pos_h_range) / upsampled_size[0]) //
+                        (1. / num_grid)))
+                left_box = max(
+                    0,
+                    int(((center_w - pos_w_range) / upsampled_size[1]) //
+                        (1. / num_grid)))
+                right_box = min(
+                    num_grid - 1,
+                    int(((center_w + pos_w_range) / upsampled_size[1]) //
+                        (1. / num_grid)))
 
                 top = max(top_box, coord_h - 1)
                 down = min(down_box, coord_h + 1)
                 left = max(coord_w - 1, left_box)
                 right = min(right_box, coord_w + 1)
 
-                cate_label[top:(down + 1), left:(right + 1)] = gt_label
-                seg_mask = imrescale(seg_mask, scale=1. / output_stride)
-                seg_mask = torch.from_numpy(seg_mask).to(device=device)
+                labels[top:(down + 1), left:(right + 1)] = gt_label
+                # ins
+                gt_mask = np.uint8(gt_mask.cpu().numpy())
+                # Follow the original implementation, F.interpolate is
+                # different from cv2 and opencv
+                gt_mask = rflib.imrescale(gt_mask, scale=1. / output_stride)
+                gt_mask = torch.from_numpy(gt_mask).to(device=device)
+
                 for i in range(top, down + 1):
                     for j in range(left, right + 1):
-                        label = int(i * num_grid + j)
+                        index = int(i * num_grid + j)
+                        mask_target[index, :gt_mask.shape[0], :gt_mask.
+                                    shape[1]] = gt_mask
+                        pos_mask[index] = True
+            mlvl_pos_mask_targets.append(mask_target[pos_mask])
+            mlvl_labels.append(labels)
+            mlvl_pos_masks.append(pos_mask)
+        return mlvl_pos_mask_targets, mlvl_labels, mlvl_pos_masks
 
-                        cur_ins_label = torch.zeros([mask_feat_size[0], mask_feat_size[1]], dtype=torch.uint8,
-                                                    device=device)
-                        cur_ins_label[:seg_mask.shape[0], :seg_mask.shape[1]] = seg_mask
-                        ins_label.append(cur_ins_label)
-                        ins_ind_label[label] = True
-                        grid_order.append(label)
-            if len(ins_label) == 0:
-                ins_label = torch.zeros([0, mask_feat_size[0], mask_feat_size[1]], dtype=torch.uint8, device=device)
-            else:
-                ins_label = torch.stack(ins_label, 0)
-            ins_label_list.append(ins_label)
-            cate_label_list.append(cate_label)
-            ins_ind_label_list.append(ins_ind_label)
-            grid_order_list.append(grid_order)
-        return ins_label_list, cate_label_list, ins_ind_label_list, grid_order_list
+    def get_results(self, mlvl_mask_preds, mlvl_cls_scores, img_metas,
+                    **kwargs):
+        """Get multi-image mask results.
 
-    def get_seg(self, cate_preds, kernel_preds, seg_pred, img_metas, cfg, rescale=None):
-        num_levels = len(cate_preds)
-        featmap_size = seg_pred.size()[-2:]
+        Args:
+            mlvl_mask_preds (list[Tensor]): Multi-level mask prediction.
+                Each element in the list has shape
+                (batch_size, num_grids**2 ,h ,w).
+            mlvl_cls_scores (list[Tensor]): Multi-level scores. Each element
+                in the list has shape
+                (batch_size, num_classes, num_grids ,num_grids).
+            img_metas (list[dict]): Meta information of all images.
 
-        result_list = []
+        Returns:
+            list[:obj:`InstanceData`]: Processed results of multiple
+            images.Each :obj:`InstanceData` usually contains
+            following keys.
+
+                - scores (Tensor): Classification scores, has shape
+                  (num_instance,).
+                - labels (Tensor): Has shape (num_instances,).
+                - masks (Tensor): Processed mask results, has
+                  shape (num_instances, h, w).
+        """
+        mlvl_cls_scores = [
+            item.permute(0, 2, 3, 1) for item in mlvl_cls_scores
+        ]
+        assert len(mlvl_mask_preds) == len(mlvl_cls_scores)
+        num_levels = len(mlvl_cls_scores)
+
+        results_list = []
         for img_id in range(len(img_metas)):
-            cate_pred_list = [
-                cate_preds[i][img_id].view(-1, self.cate_out_channels).detach() for i in range(num_levels)
+            cls_pred_list = [
+                mlvl_cls_scores[lvl][img_id].view(-1, self.cls_out_channels)
+                for lvl in range(num_levels)
             ]
-            seg_pred_list = seg_pred[img_id, ...].unsqueeze(0)
-            kernel_pred_list = [
-                kernel_preds[i][img_id].permute(1, 2, 0).view(-1, self.kernel_out_channels).detach()
-                for i in range(num_levels)
+            mask_pred_list = [
+                mlvl_mask_preds[lvl][img_id] for lvl in range(num_levels)
             ]
-            img_shape = img_metas[img_id]['img_shape']
-            scale_factor = img_metas[img_id]['scale_factor']
-            ori_shape = img_metas[img_id]['ori_shape']
 
-            cate_pred_list = torch.cat(cate_pred_list, dim=0)
-            kernel_pred_list = torch.cat(kernel_pred_list, dim=0)
+            cls_pred_list = torch.cat(cls_pred_list, dim=0)
+            mask_pred_list = torch.cat(mask_pred_list, dim=0)
 
-            result = self.get_seg_single(cate_pred_list, seg_pred_list, kernel_pred_list,
-                                         featmap_size, img_shape, ori_shape, scale_factor, cfg, rescale)
-            result_list.append(result)
-        return result_list
+            results = self._get_results_single(
+                cls_pred_list, mask_pred_list, img_meta=img_metas[img_id])
+            results_list.append(results)
 
-    def get_seg_single(self,
-                       cate_preds,
-                       seg_preds,
-                       kernel_preds,
-                       featmap_size,
-                       img_shape,
-                       ori_shape,
-                       scale_factor,
-                       cfg,
-                       rescale=False, debug=False):
+        return results_list
 
-        assert len(cate_preds) == len(kernel_preds)
+    def _get_results_single(self, cls_scores, mask_preds, img_meta, cfg=None):
+        """Get processed mask related results of single image.
 
-        # overall info.
+        Args:
+            cls_scores (Tensor): Classification score of all points
+                in single image, has shape (num_points, num_classes).
+            mask_preds (Tensor): Mask prediction of all points in
+                single image, has shape (num_points, feat_h, feat_w).
+            img_meta (dict): Meta information of corresponding image.
+            cfg (dict, optional): Config used in test phase.
+                Default: None.
+
+        Returns:
+            :obj:`InstanceData`: Processed results of single image.
+             it usually contains following keys.
+
+                - scores (Tensor): Classification scores, has shape
+                  (num_instance,).
+                - labels (Tensor): Has shape (num_instances,).
+                - masks (Tensor): Processed mask results, has
+                  shape (num_instances, h, w).
+        """
+
+        def empty_results(results, cls_scores):
+            """Generate a empty results."""
+            results.scores = cls_scores.new_ones(0)
+            results.masks = cls_scores.new_zeros(0, *results.ori_shape[:2])
+            results.labels = cls_scores.new_ones(0)
+            return results
+
+        cfg = self.test_cfg if cfg is None else cfg
+        assert len(cls_scores) == len(mask_preds)
+        results = InstanceData(img_meta)
+
+        featmap_size = mask_preds.size()[-2:]
+
+        img_shape = results.img_shape
+        ori_shape = results.ori_shape
+
         h, w, _ = img_shape
-        upsampled_size_out = (featmap_size[0] * 4, featmap_size[1] * 4)
+        upsampled_size = (featmap_size[0] * 4, featmap_size[1] * 4)
 
-        # process.
-        inds = (cate_preds > cfg.score_thr)
-        cate_scores = cate_preds[inds]
-        if len(cate_scores) == 0:
-            return None
+        score_mask = (cls_scores > cfg.score_thr)
+        cls_scores = cls_scores[score_mask]
+        if len(cls_scores) == 0:
+            return empty_results(results, cls_scores)
 
-        # cate_labels & kernel_preds
-        inds = inds.nonzero()
-        cate_labels = inds[:, 1]
-        kernel_preds = kernel_preds[inds[:, 0]]
+        inds = score_mask.nonzero()
+        cls_labels = inds[:, 1]
 
-        # trans vector.
-        size_trans = cate_labels.new_tensor(self.seg_num_grids).pow(2).cumsum(0)
-        strides = kernel_preds.new_ones(size_trans[-1])
-
-        n_stage = len(self.seg_num_grids)
-        strides[:size_trans[0]] *= self.strides[0]
-        for ind_ in range(1, n_stage):
-            strides[size_trans[ind_ - 1]:size_trans[ind_]] *= self.strides[ind_]
+        # Filter the mask mask with an area is smaller than
+        # stride of corresponding feature level
+        lvl_interval = cls_labels.new_tensor(self.num_grids).pow(2).cumsum(0)
+        strides = cls_scores.new_ones(lvl_interval[-1])
+        strides[:lvl_interval[0]] *= self.strides[0]
+        for lvl in range(1, self.num_levels):
+            strides[lvl_interval[lvl -
+                                 1]:lvl_interval[lvl]] *= self.strides[lvl]
         strides = strides[inds[:, 0]]
+        mask_preds = mask_preds[inds[:, 0]]
 
-        # mask encoding.
-        I, N = kernel_preds.shape
-        kernel_preds = kernel_preds.view(I, N, 1, 1)
-        seg_preds = F.conv2d(seg_preds, kernel_preds, stride=1).squeeze(0).sigmoid()
-        # mask.
-        seg_masks = seg_preds > cfg.mask_thr
-        sum_masks = seg_masks.sum((1, 2)).float()
-
-        # filter.
+        masks = mask_preds > cfg.mask_thr
+        sum_masks = masks.sum((1, 2)).float()
         keep = sum_masks > strides
         if keep.sum() == 0:
-            return None
-
-        seg_masks = seg_masks[keep, ...]
-        seg_preds = seg_preds[keep, ...]
+            return empty_results(results, cls_scores)
+        masks = masks[keep]
+        mask_preds = mask_preds[keep]
         sum_masks = sum_masks[keep]
-        cate_scores = cate_scores[keep]
-        cate_labels = cate_labels[keep]
+        cls_scores = cls_scores[keep]
+        cls_labels = cls_labels[keep]
 
         # maskness.
-        seg_scores = (seg_preds * seg_masks.float()).sum((1, 2)) / sum_masks
-        cate_scores *= seg_scores
+        mask_scores = (mask_preds * masks).sum((1, 2)) / sum_masks
+        cls_scores *= mask_scores
 
-        # sort and keep top nms_pre
-        sort_inds = torch.argsort(cate_scores, descending=True)
-        if len(sort_inds) > cfg.nms_pre:
-            sort_inds = sort_inds[:cfg.nms_pre]
-        seg_masks = seg_masks[sort_inds, :, :]
-        seg_preds = seg_preds[sort_inds, :, :]
-        sum_masks = sum_masks[sort_inds]
-        cate_scores = cate_scores[sort_inds]
-        cate_labels = cate_labels[sort_inds]
+        scores, labels, _, keep_inds = mask_matrix_nms(
+            masks,
+            cls_labels,
+            cls_scores,
+            mask_area=sum_masks,
+            nms_pre=cfg.nms_pre,
+            max_num=cfg.max_per_img,
+            kernel=cfg.kernel,
+            sigma=cfg.sigma,
+            filter_thr=cfg.filter_thr)
+        mask_preds = mask_preds[keep_inds]
+        mask_preds = F.interpolate(
+            mask_preds.unsqueeze(0), size=upsampled_size,
+            mode='bilinear')[:, :, :h, :w]
+        mask_preds = F.interpolate(
+            mask_preds, size=ori_shape[:2], mode='bilinear').squeeze(0)
+        masks = mask_preds > cfg.mask_thr
 
-        # Matrix NMS
-        cate_scores = matrix_nms(seg_masks, cate_labels, cate_scores,
-                                 kernel=cfg.kernel, sigma=cfg.sigma, sum_masks=sum_masks)
+        results.masks = masks
+        results.labels = labels
+        results.scores = scores
 
-        # filter.
-        keep = cate_scores >= cfg.update_thr
-        if keep.sum() == 0:
-            return None
-        seg_preds = seg_preds[keep, :, :]
-        cate_scores = cate_scores[keep]
-        cate_labels = cate_labels[keep]
-
-        # sort and keep top_k
-        sort_inds = torch.argsort(cate_scores, descending=True)
-        if len(sort_inds) > cfg.max_per_img:
-            sort_inds = sort_inds[:cfg.max_per_img]
-        seg_preds = seg_preds[sort_inds, :, :]
-        cate_scores = cate_scores[sort_inds]
-        cate_labels = cate_labels[sort_inds]
-
-        seg_preds = F.interpolate(seg_preds.unsqueeze(0),
-                                  size=upsampled_size_out,
-                                  mode='bilinear')[:, :, :h, :w]
-        seg_masks = F.interpolate(seg_preds,
-                                  size=ori_shape[:2],
-                                  mode='bilinear').squeeze(0)
-        seg_masks = seg_masks > cfg.mask_thr
-        return seg_masks, cate_labels, cate_scores
+        return results
 
 
 @HEADS.register_module()
-class MaskFeatHead(nn.Module):
+class DecoupledSOLOHead(SOLOHead):
+    """Decoupled SOLO mask head used in `SOLO: Segmenting Objects by Locations.
+
+    <https://arxiv.org/abs/1912.04488>`_
+
+    Args:
+        init_cfg (dict or list[dict], optional): Initialization config dict.
+    """
+
     def __init__(self,
-                 in_channels,
-                 out_channels,
-                 start_level,
-                 end_level,
-                 num_classes,
-                 conv_cfg=None,
-                 norm_cfg=None):
-        super(MaskFeatHead, self).__init__()
+                 *args,
+                 init_cfg=[
+                     dict(type='Normal', layer='Conv2d', std=0.01),
+                     dict(
+                         type='Normal',
+                         std=0.01,
+                         bias_prob=0.01,
+                         override=dict(name='conv_mask_list_x')),
+                     dict(
+                         type='Normal',
+                         std=0.01,
+                         bias_prob=0.01,
+                         override=dict(name='conv_mask_list_y')),
+                     dict(
+                         type='Normal',
+                         std=0.01,
+                         bias_prob=0.01,
+                         override=dict(name='conv_cls'))
+                 ],
+                 **kwargs):
+        super(DecoupledSOLOHead, self).__init__(
+            *args, init_cfg=init_cfg, **kwargs)
 
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.start_level = start_level
-        self.end_level = end_level
-        assert start_level >= 0 and end_level >= start_level
-        self.num_classes = num_classes
-        self.conv_cfg = conv_cfg
-        self.norm_cfg = norm_cfg
+    def _init_layers(self):
+        self.mask_convs_x = nn.ModuleList()
+        self.mask_convs_y = nn.ModuleList()
+        self.cls_convs = nn.ModuleList()
 
-        self.convs_all_levels = nn.ModuleList()
-        for i in range(self.start_level, self.end_level + 1):
-            convs_per_level = nn.Sequential()
-            if i == 0:
-                one_conv = ConvModule(
-                    self.in_channels,
-                    self.out_channels,
+        for i in range(self.stacked_convs):
+            chn = self.in_channels + 1 if i == 0 else self.feat_channels
+            self.mask_convs_x.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
                     3,
+                    stride=1,
                     padding=1,
-                    conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg,
-                    inplace=False)
-                convs_per_level.add_module('conv' + str(i), one_conv)
-                self.convs_all_levels.append(convs_per_level)
+                    norm_cfg=self.norm_cfg))
+            self.mask_convs_y.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    norm_cfg=self.norm_cfg))
+
+            chn = self.in_channels if i == 0 else self.feat_channels
+            self.cls_convs.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    norm_cfg=self.norm_cfg))
+
+        self.conv_mask_list_x = nn.ModuleList()
+        self.conv_mask_list_y = nn.ModuleList()
+        for num_grid in self.num_grids:
+            self.conv_mask_list_x.append(
+                nn.Conv2d(self.feat_channels, num_grid, 3, padding=1))
+            self.conv_mask_list_y.append(
+                nn.Conv2d(self.feat_channels, num_grid, 3, padding=1))
+        self.conv_cls = nn.Conv2d(
+            self.feat_channels, self.cls_out_channels, 3, padding=1)
+
+    def forward(self, feats):
+        assert len(feats) == self.num_levels
+        feats = self.resize_feats(feats)
+        mask_preds_x = []
+        mask_preds_y = []
+        cls_preds = []
+        for i in range(self.num_levels):
+            x = feats[i]
+            mask_feat = x
+            cls_feat = x
+            # generate and concat the coordinate
+            coord_feat = generate_coordinate(mask_feat.size(),
+                                             mask_feat.device)
+            mask_feat_x = torch.cat([mask_feat, coord_feat[:, 0:1, ...]], 1)
+            mask_feat_y = torch.cat([mask_feat, coord_feat[:, 1:2, ...]], 1)
+
+            for mask_layer_x, mask_layer_y in \
+                    zip(self.mask_convs_x, self.mask_convs_y):
+                mask_feat_x = mask_layer_x(mask_feat_x)
+                mask_feat_y = mask_layer_y(mask_feat_y)
+
+            mask_feat_x = F.interpolate(
+                mask_feat_x, scale_factor=2, mode='bilinear')
+            mask_feat_y = F.interpolate(
+                mask_feat_y, scale_factor=2, mode='bilinear')
+
+            mask_pred_x = self.conv_mask_list_x[i](mask_feat_x)
+            mask_pred_y = self.conv_mask_list_y[i](mask_feat_y)
+
+            # cls branch
+            for j, cls_layer in enumerate(self.cls_convs):
+                if j == self.cls_down_index:
+                    num_grid = self.num_grids[i]
+                    cls_feat = F.interpolate(
+                        cls_feat, size=num_grid, mode='bilinear')
+                cls_feat = cls_layer(cls_feat)
+
+            cls_pred = self.conv_cls(cls_feat)
+
+            if not self.training:
+                feat_wh = feats[0].size()[-2:]
+                upsampled_size = (feat_wh[0] * 2, feat_wh[1] * 2)
+                mask_pred_x = F.interpolate(
+                    mask_pred_x.sigmoid(),
+                    size=upsampled_size,
+                    mode='bilinear')
+                mask_pred_y = F.interpolate(
+                    mask_pred_y.sigmoid(),
+                    size=upsampled_size,
+                    mode='bilinear')
+                cls_pred = cls_pred.sigmoid()
+                # get local maximum
+                local_max = F.max_pool2d(cls_pred, 2, stride=1, padding=1)
+                keep_mask = local_max[:, :, :-1, :-1] == cls_pred
+                cls_pred = cls_pred * keep_mask
+
+            mask_preds_x.append(mask_pred_x)
+            mask_preds_y.append(mask_pred_y)
+            cls_preds.append(cls_pred)
+        return mask_preds_x, mask_preds_y, cls_preds
+
+    def loss(self,
+             mlvl_mask_preds_x,
+             mlvl_mask_preds_y,
+             mlvl_cls_preds,
+             gt_labels,
+             gt_masks,
+             img_metas,
+             gt_bboxes=None,
+             **kwargs):
+        """Calculate the loss of total batch.
+
+        Args:
+            mlvl_mask_preds_x (list[Tensor]): Multi-level mask prediction
+                from x branch. Each element in the list has shape
+                (batch_size, num_grids ,h ,w).
+            mlvl_mask_preds_x (list[Tensor]): Multi-level mask prediction
+                from y branch. Each element in the list has shape
+                (batch_size, num_grids ,h ,w).
+            mlvl_cls_preds (list[Tensor]): Multi-level scores. Each element
+                in the list has shape
+                (batch_size, num_classes, num_grids ,num_grids).
+            gt_labels (list[Tensor]): Labels of multiple images.
+            gt_masks (list[Tensor]): Ground truth masks of multiple images.
+                Each has shape (num_instances, h, w).
+            img_metas (list[dict]): Meta information of multiple images.
+            gt_bboxes (list[Tensor]): Ground truth bboxes of multiple
+                images. Default: None.
+
+        Returns:
+            dict[str, Tensor]: A dictionary of loss components.
+        """
+        num_levels = self.num_levels
+        num_imgs = len(gt_labels)
+        featmap_sizes = [featmap.size()[-2:] for featmap in mlvl_mask_preds_x]
+
+        pos_mask_targets, labels, \
+            xy_pos_indexes = \
+            multi_apply(self._get_targets_single,
+                        gt_bboxes,
+                        gt_labels,
+                        gt_masks,
+                        featmap_sizes=featmap_sizes)
+
+        # change from the outside list meaning multi images
+        # to the outside list meaning multi levels
+        mlvl_pos_mask_targets = [[] for _ in range(num_levels)]
+        mlvl_pos_mask_preds_x = [[] for _ in range(num_levels)]
+        mlvl_pos_mask_preds_y = [[] for _ in range(num_levels)]
+        mlvl_labels = [[] for _ in range(num_levels)]
+        for img_id in range(num_imgs):
+
+            for lvl in range(num_levels):
+                mlvl_pos_mask_targets[lvl].append(
+                    pos_mask_targets[img_id][lvl])
+                mlvl_pos_mask_preds_x[lvl].append(
+                    mlvl_mask_preds_x[lvl][img_id,
+                                           xy_pos_indexes[img_id][lvl][:, 1]])
+                mlvl_pos_mask_preds_y[lvl].append(
+                    mlvl_mask_preds_y[lvl][img_id,
+                                           xy_pos_indexes[img_id][lvl][:, 0]])
+                mlvl_labels[lvl].append(labels[img_id][lvl].flatten())
+
+        # cat multiple image
+        temp_mlvl_cls_preds = []
+        for lvl in range(num_levels):
+            mlvl_pos_mask_targets[lvl] = torch.cat(
+                mlvl_pos_mask_targets[lvl], dim=0)
+            mlvl_pos_mask_preds_x[lvl] = torch.cat(
+                mlvl_pos_mask_preds_x[lvl], dim=0)
+            mlvl_pos_mask_preds_y[lvl] = torch.cat(
+                mlvl_pos_mask_preds_y[lvl], dim=0)
+            mlvl_labels[lvl] = torch.cat(mlvl_labels[lvl], dim=0)
+            temp_mlvl_cls_preds.append(mlvl_cls_preds[lvl].permute(
+                0, 2, 3, 1).reshape(-1, self.cls_out_channels))
+
+        num_pos = 0.
+        # dice loss
+        loss_mask = []
+        for pred_x, pred_y, target in \
+                zip(mlvl_pos_mask_preds_x,
+                    mlvl_pos_mask_preds_y, mlvl_pos_mask_targets):
+            num_masks = pred_x.size(0)
+            if num_masks == 0:
+                # make sure can get grad
+                loss_mask.append((pred_x.sum() + pred_y.sum()).unsqueeze(0))
                 continue
+            num_pos += num_masks
+            pred_mask = pred_y.sigmoid() * pred_x.sigmoid()
+            loss_mask.append(
+                self.loss_mask(pred_mask, target, reduction_override='none'))
+        if num_pos > 0:
+            loss_mask = torch.cat(loss_mask).sum() / num_pos
+        else:
+            loss_mask = torch.cat(loss_mask).mean()
 
-            for j in range(i):
-                if j == 0:
-                    chn = self.in_channels + 2 if i == 3 else self.in_channels
-                    one_conv = ConvModule(
-                        chn,
-                        self.out_channels,
-                        3,
-                        padding=1,
-                        conv_cfg=self.conv_cfg,
-                        norm_cfg=self.norm_cfg,
-                        inplace=False)
-                    convs_per_level.add_module('conv' + str(j), one_conv)
-                    one_upsample = nn.Upsample(
-                        scale_factor=2, mode='bilinear', align_corners=False)
-                    convs_per_level.add_module(
-                        'upsample' + str(j), one_upsample)
-                    continue
+        # cate
+        flatten_labels = torch.cat(mlvl_labels)
+        flatten_cls_preds = torch.cat(temp_mlvl_cls_preds)
 
-                one_conv = ConvModule(
-                    self.out_channels,
-                    self.out_channels,
+        loss_cls = self.loss_cls(
+            flatten_cls_preds, flatten_labels, avg_factor=num_pos + 1)
+        return dict(loss_mask=loss_mask, loss_cls=loss_cls)
+
+    def _get_targets_single(self,
+                            gt_bboxes,
+                            gt_labels,
+                            gt_masks,
+                            featmap_sizes=None):
+        """Compute targets for predictions of single image.
+
+        Args:
+            gt_bboxes (Tensor): Ground truth bbox of each instance,
+                shape (num_gts, 4).
+            gt_labels (Tensor): Ground truth label of each instance,
+                shape (num_gts,).
+            gt_masks (Tensor): Ground truth mask of each instance,
+                shape (num_gts, h, w).
+            featmap_sizes (list[:obj:`torch.size`]): Size of each
+                feature map from feature pyramid, each element
+                means (feat_h, feat_w). Default: None.
+
+        Returns:
+            Tuple: Usually returns a tuple containing targets for predictions.
+
+                - mlvl_pos_mask_targets (list[Tensor]): Each element represent
+                  the binary mask targets for positive points in this
+                  level, has shape (num_pos, out_h, out_w).
+                - mlvl_labels (list[Tensor]): Each element is
+                  classification labels for all
+                  points in this level, has shape
+                  (num_grid, num_grid).
+                - mlvl_xy_pos_indexes (list[Tensor]): Each element
+                  in the list contains the index of positive samples in
+                  corresponding level, has shape (num_pos, 2), last
+                  dimension 2 present (index_x, index_y).
+        """
+        mlvl_pos_mask_targets, mlvl_labels, \
+            mlvl_pos_masks = \
+            super()._get_targets_single(gt_bboxes, gt_labels, gt_masks,
+                                        featmap_sizes=featmap_sizes)
+
+        mlvl_xy_pos_indexes = [(item - self.num_classes).nonzero()
+                               for item in mlvl_labels]
+
+        return mlvl_pos_mask_targets, mlvl_labels, mlvl_xy_pos_indexes
+
+    def get_results(self,
+                    mlvl_mask_preds_x,
+                    mlvl_mask_preds_y,
+                    mlvl_cls_scores,
+                    img_metas,
+                    rescale=None,
+                    **kwargs):
+        """Get multi-image mask results.
+
+        Args:
+            mlvl_mask_preds_x (list[Tensor]): Multi-level mask prediction
+                from x branch. Each element in the list has shape
+                (batch_size, num_grids ,h ,w).
+            mlvl_mask_preds_y (list[Tensor]): Multi-level mask prediction
+                from y branch. Each element in the list has shape
+                (batch_size, num_grids ,h ,w).
+            mlvl_cls_scores (list[Tensor]): Multi-level scores. Each element
+                in the list has shape
+                (batch_size, num_classes ,num_grids ,num_grids).
+            img_metas (list[dict]): Meta information of all images.
+
+        Returns:
+            list[:obj:`InstanceData`]: Processed results of multiple
+            images.Each :obj:`InstanceData` usually contains
+            following keys.
+
+                - scores (Tensor): Classification scores, has shape
+                  (num_instance,).
+                - labels (Tensor): Has shape (num_instances,).
+                - masks (Tensor): Processed mask results, has
+                  shape (num_instances, h, w).
+        """
+        mlvl_cls_scores = [
+            item.permute(0, 2, 3, 1) for item in mlvl_cls_scores
+        ]
+        assert len(mlvl_mask_preds_x) == len(mlvl_cls_scores)
+        num_levels = len(mlvl_cls_scores)
+
+        results_list = []
+        for img_id in range(len(img_metas)):
+            cls_pred_list = [
+                mlvl_cls_scores[i][img_id].view(
+                    -1, self.cls_out_channels).detach()
+                for i in range(num_levels)
+            ]
+            mask_pred_list_x = [
+                mlvl_mask_preds_x[i][img_id] for i in range(num_levels)
+            ]
+            mask_pred_list_y = [
+                mlvl_mask_preds_y[i][img_id] for i in range(num_levels)
+            ]
+
+            cls_pred_list = torch.cat(cls_pred_list, dim=0)
+            mask_pred_list_x = torch.cat(mask_pred_list_x, dim=0)
+            mask_pred_list_y = torch.cat(mask_pred_list_y, dim=0)
+
+            results = self._get_results_single(
+                cls_pred_list,
+                mask_pred_list_x,
+                mask_pred_list_y,
+                img_meta=img_metas[img_id],
+                cfg=self.test_cfg)
+            results_list.append(results)
+        return results_list
+
+    def _get_results_single(self, cls_scores, mask_preds_x, mask_preds_y,
+                            img_meta, cfg):
+        """Get processed mask related results of single image.
+
+        Args:
+            cls_scores (Tensor): Classification score of all points
+                in single image, has shape (num_points, num_classes).
+            mask_preds_x (Tensor): Mask prediction of x branch of
+                all points in single image, has shape
+                (sum_num_grids, feat_h, feat_w).
+            mask_preds_y (Tensor): Mask prediction of y branch of
+                all points in single image, has shape
+                (sum_num_grids, feat_h, feat_w).
+            img_meta (dict): Meta information of corresponding image.
+            cfg (dict): Config used in test phase.
+
+        Returns:
+            :obj:`InstanceData`: Processed results of single image.
+             it usually contains following keys.
+
+                - scores (Tensor): Classification scores, has shape
+                  (num_instance,).
+                - labels (Tensor): Has shape (num_instances,).
+                - masks (Tensor): Processed mask results, has
+                  shape (num_instances, h, w).
+        """
+
+        def empty_results(results, cls_scores):
+            """Generate a empty results."""
+            results.scores = cls_scores.new_ones(0)
+            results.masks = cls_scores.new_zeros(0, *results.ori_shape[:2])
+            results.labels = cls_scores.new_ones(0)
+            return results
+
+        cfg = self.test_cfg if cfg is None else cfg
+
+        results = InstanceData(img_meta)
+        img_shape = results.img_shape
+        ori_shape = results.ori_shape
+        h, w, _ = img_shape
+        featmap_size = mask_preds_x.size()[-2:]
+        upsampled_size = (featmap_size[0] * 4, featmap_size[1] * 4)
+
+        score_mask = (cls_scores > cfg.score_thr)
+        cls_scores = cls_scores[score_mask]
+        inds = score_mask.nonzero()
+        lvl_interval = inds.new_tensor(self.num_grids).pow(2).cumsum(0)
+        num_all_points = lvl_interval[-1]
+        lvl_start_index = inds.new_ones(num_all_points)
+        num_grids = inds.new_ones(num_all_points)
+        seg_size = inds.new_tensor(self.num_grids).cumsum(0)
+        mask_lvl_start_index = inds.new_ones(num_all_points)
+        strides = inds.new_ones(num_all_points)
+
+        lvl_start_index[:lvl_interval[0]] *= 0
+        mask_lvl_start_index[:lvl_interval[0]] *= 0
+        num_grids[:lvl_interval[0]] *= self.num_grids[0]
+        strides[:lvl_interval[0]] *= self.strides[0]
+
+        for lvl in range(1, self.num_levels):
+            lvl_start_index[lvl_interval[lvl - 1]:lvl_interval[lvl]] *= \
+                lvl_interval[lvl - 1]
+            mask_lvl_start_index[lvl_interval[lvl - 1]:lvl_interval[lvl]] *= \
+                seg_size[lvl - 1]
+            num_grids[lvl_interval[lvl - 1]:lvl_interval[lvl]] *= \
+                self.num_grids[lvl]
+            strides[lvl_interval[lvl - 1]:lvl_interval[lvl]] *= \
+                self.strides[lvl]
+
+        lvl_start_index = lvl_start_index[inds[:, 0]]
+        mask_lvl_start_index = mask_lvl_start_index[inds[:, 0]]
+        num_grids = num_grids[inds[:, 0]]
+        strides = strides[inds[:, 0]]
+
+        y_lvl_offset = (inds[:, 0] - lvl_start_index) // num_grids
+        x_lvl_offset = (inds[:, 0] - lvl_start_index) % num_grids
+        y_inds = mask_lvl_start_index + y_lvl_offset
+        x_inds = mask_lvl_start_index + x_lvl_offset
+
+        cls_labels = inds[:, 1]
+        mask_preds = mask_preds_x[x_inds, ...] * mask_preds_y[y_inds, ...]
+
+        masks = mask_preds > cfg.mask_thr
+        sum_masks = masks.sum((1, 2)).float()
+        keep = sum_masks > strides
+        if keep.sum() == 0:
+            return empty_results(results, cls_scores)
+
+        masks = masks[keep]
+        mask_preds = mask_preds[keep]
+        sum_masks = sum_masks[keep]
+        cls_scores = cls_scores[keep]
+        cls_labels = cls_labels[keep]
+
+        # maskness.
+        mask_scores = (mask_preds * masks).sum((1, 2)) / sum_masks
+        cls_scores *= mask_scores
+
+        scores, labels, _, keep_inds = mask_matrix_nms(
+            masks,
+            cls_labels,
+            cls_scores,
+            mask_area=sum_masks,
+            nms_pre=cfg.nms_pre,
+            max_num=cfg.max_per_img,
+            kernel=cfg.kernel,
+            sigma=cfg.sigma,
+            filter_thr=cfg.filter_thr)
+        mask_preds = mask_preds[keep_inds]
+        mask_preds = F.interpolate(
+            mask_preds.unsqueeze(0), size=upsampled_size,
+            mode='bilinear')[:, :, :h, :w]
+        mask_preds = F.interpolate(
+            mask_preds, size=ori_shape[:2], mode='bilinear').squeeze(0)
+        masks = mask_preds > cfg.mask_thr
+
+        results.masks = masks
+        results.labels = labels
+        results.scores = scores
+
+        return results
+
+
+@HEADS.register_module()
+class DecoupledSOLOLightHead(DecoupledSOLOHead):
+    """Decoupled Light SOLO mask head used in `SOLO: Segmenting Objects by
+    Locations <https://arxiv.org/abs/1912.04488>`_
+
+    Args:
+        with_dcn (bool): Whether use dcn in mask_convs and cls_convs,
+            default: False.
+        init_cfg (dict or list[dict], optional): Initialization config dict.
+    """
+
+    def __init__(self,
+                 *args,
+                 dcn_cfg=None,
+                 init_cfg=[
+                     dict(type='Normal', layer='Conv2d', std=0.01),
+                     dict(
+                         type='Normal',
+                         std=0.01,
+                         bias_prob=0.01,
+                         override=dict(name='conv_mask_list_x')),
+                     dict(
+                         type='Normal',
+                         std=0.01,
+                         bias_prob=0.01,
+                         override=dict(name='conv_mask_list_y')),
+                     dict(
+                         type='Normal',
+                         std=0.01,
+                         bias_prob=0.01,
+                         override=dict(name='conv_cls'))
+                 ],
+                 **kwargs):
+        assert dcn_cfg is None or isinstance(dcn_cfg, dict)
+        self.dcn_cfg = dcn_cfg
+        super(DecoupledSOLOLightHead, self).__init__(
+            *args, init_cfg=init_cfg, **kwargs)
+
+    def _init_layers(self):
+        self.mask_convs = nn.ModuleList()
+        self.cls_convs = nn.ModuleList()
+
+        for i in range(self.stacked_convs):
+            if self.dcn_cfg is not None\
+                    and i == self.stacked_convs - 1:
+                conv_cfg = self.dcn_cfg
+            else:
+                conv_cfg = None
+
+            chn = self.in_channels + 2 if i == 0 else self.feat_channels
+            self.mask_convs.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
                     3,
+                    stride=1,
                     padding=1,
-                    conv_cfg=self.conv_cfg,
-                    norm_cfg=self.norm_cfg,
-                    inplace=False)
-                convs_per_level.add_module('conv' + str(j), one_conv)
-                one_upsample = nn.Upsample(
-                    scale_factor=2,
-                    mode='bilinear',
-                    align_corners=False)
-                convs_per_level.add_module('upsample' + str(j), one_upsample)
+                    conv_cfg=conv_cfg,
+                    norm_cfg=self.norm_cfg))
 
-            self.convs_all_levels.append(convs_per_level)
+            chn = self.in_channels if i == 0 else self.feat_channels
+            self.cls_convs.append(
+                ConvModule(
+                    chn,
+                    self.feat_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    conv_cfg=conv_cfg,
+                    norm_cfg=self.norm_cfg))
 
-        self.conv_pred = nn.Sequential(
-            ConvModule(
-                self.out_channels,
-                self.num_classes,
-                1,
-                padding=0,
-                conv_cfg=self.conv_cfg,
-                norm_cfg=self.norm_cfg),
-        )
+        self.conv_mask_list_x = nn.ModuleList()
+        self.conv_mask_list_y = nn.ModuleList()
+        for num_grid in self.num_grids:
+            self.conv_mask_list_x.append(
+                nn.Conv2d(self.feat_channels, num_grid, 3, padding=1))
+            self.conv_mask_list_y.append(
+                nn.Conv2d(self.feat_channels, num_grid, 3, padding=1))
+        self.conv_cls = nn.Conv2d(
+            self.feat_channels, self.cls_out_channels, 3, padding=1)
 
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                normal_init(m, std=0.01)
+    def forward(self, feats):
+        assert len(feats) == self.num_levels
+        feats = self.resize_feats(feats)
+        mask_preds_x = []
+        mask_preds_y = []
+        cls_preds = []
+        for i in range(self.num_levels):
+            x = feats[i]
+            mask_feat = x
+            cls_feat = x
+            # generate and concat the coordinate
+            coord_feat = generate_coordinate(mask_feat.size(),
+                                             mask_feat.device)
+            mask_feat = torch.cat([mask_feat, coord_feat], 1)
 
-    def forward(self, inputs):
-        assert len(inputs) == (self.end_level - self.start_level + 1)
+            for mask_layer in self.mask_convs:
+                mask_feat = mask_layer(mask_feat)
 
-        feature_add_all_level = self.convs_all_levels[0](inputs[0])
-        for i in range(1, len(inputs)):
-            input_p = inputs[i]
-            if i == 3:
-                input_feat = input_p
-                x_range = torch.linspace(-1, 1, input_feat.shape[-1], device=input_feat.device)
-                y_range = torch.linspace(-1, 1, input_feat.shape[-2], device=input_feat.device)
-                y, x = torch.meshgrid(y_range, x_range)
-                y = y.expand([input_feat.shape[0], 1, -1, -1])
-                x = x.expand([input_feat.shape[0], 1, -1, -1])
-                coord_feat = torch.cat([x, y], 1)
-                input_p = torch.cat([input_p, coord_feat], 1)
+            mask_feat = F.interpolate(
+                mask_feat, scale_factor=2, mode='bilinear')
 
-            feature_add_all_level += self.convs_all_levels[i](input_p)
+            mask_pred_x = self.conv_mask_list_x[i](mask_feat)
+            mask_pred_y = self.conv_mask_list_y[i](mask_feat)
 
-        feature_pred = self.conv_pred(feature_add_all_level)
-        return feature_pred
+            # cls branch
+            for j, cls_layer in enumerate(self.cls_convs):
+                if j == self.cls_down_index:
+                    num_grid = self.num_grids[i]
+                    cls_feat = F.interpolate(
+                        cls_feat, size=num_grid, mode='bilinear')
+                cls_feat = cls_layer(cls_feat)
+
+            cls_pred = self.conv_cls(cls_feat)
+
+            if not self.training:
+                feat_wh = feats[0].size()[-2:]
+                upsampled_size = (feat_wh[0] * 2, feat_wh[1] * 2)
+                mask_pred_x = F.interpolate(
+                    mask_pred_x.sigmoid(),
+                    size=upsampled_size,
+                    mode='bilinear')
+                mask_pred_y = F.interpolate(
+                    mask_pred_y.sigmoid(),
+                    size=upsampled_size,
+                    mode='bilinear')
+                cls_pred = cls_pred.sigmoid()
+                # get local maximum
+                local_max = F.max_pool2d(cls_pred, 2, stride=1, padding=1)
+                keep_mask = local_max[:, :, :-1, :-1] == cls_pred
+                cls_pred = cls_pred * keep_mask
+
+            mask_preds_x.append(mask_pred_x)
+            mask_preds_y.append(mask_pred_y)
+            cls_preds.append(cls_pred)
+        return mask_preds_x, mask_preds_y, cls_preds

@@ -22,7 +22,7 @@ def knn_search(x, y, k=1):
     return index
 
 if __name__ == '__main__':
-    k = 5
+    k = 1
     x = torch.rand((5, 3))
     y = torch.rand((2, 3))
 
@@ -30,6 +30,6 @@ if __name__ == '__main__':
     index = knn_search(x, y, k)
 
     # KNNSearch is not cuda-supported
-    from open3d.ml.torch.layers import KNNSearch
-    nsearch = KNNSearch()
-    index_o3d = nsearch(x, y, k).neighbors_index.reshape(y.shape[0], k)
+    # from open3d.ml.torch.layers import KNNSearch
+    # nsearch = KNNSearch()
+    # index_o3d = nsearch(x, y, k).neighbors_index.reshape(y.shape[0], k)

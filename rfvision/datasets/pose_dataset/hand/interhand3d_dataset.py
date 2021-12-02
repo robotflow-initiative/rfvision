@@ -335,7 +335,7 @@ class InterHand3DDataset(Kpt3dSviewRgbImgTopDownDataset):
         kpts = self._sort_and_unique_bboxes(kpts)
 
         self._write_keypoint_results(kpts, res_file)
-        print(f'Keypoints has saved to {os.path.abspath(res_file)}')
+        print(f'\nKeypoints has saved to {os.path.abspath(res_file)}')
         info_str = self._report_metric(res_file, metrics)
         name_value = OrderedDict(info_str)
 

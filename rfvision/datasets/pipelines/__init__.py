@@ -17,8 +17,6 @@ from .arti_pipeline import (CreatePointData, LoadArtiPointData, DownSamplePointD
                             CreatePartRelationGT, CreatePartMask, DownSampleArti,
                             DefaultFormatBundleArti)
 
-from .densefusion_pipeline import (CreatePoseGT, DefaultPoseFormatBundle,
-                                   LoadPoseData, PoseImgPreprocess,)
 from .dbsampler import DataBaseSampler
 from .formating3d import Collect3D, DefaultFormatBundle, DefaultFormatBundle3D
 from .loading3d import (LoadAnnotations3D, LoadMultiViewImageFromFiles,
@@ -45,6 +43,12 @@ from .pose3d_transform import (GetRootCenteredPose, NormalizeJointCoordinate, Im
                                CollectCameraIntrinsics, CameraProjection, RelativeJointRandomFlip,
                                PoseSequenceToTensor, Generate3DHeatmapTarget)
 from .hand_transform import HandGenerateRelDepthTarget, HandRandomFlip
+
+
+from .loading_custom import LoadPointsFromFilePointFormer
+
+
+
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
     'Transpose', 'Collect', 'DefaultFormatBundle', 'LoadAnnotations',
@@ -57,8 +61,8 @@ __all__ = [
     'ContrastTransform', 'Translate', 'RandomShift', 'GenerateCoef', 'CreatePointData',
     'LoadArtiPointData', 'DownSamplePointData', 'LoadArtiNOCSData', 'LoadArtiJointData',
     'CreateArtiJointGT', 'CreatePartRelationGT', 'CreatePartMask', 'DownSampleArti',
-    'DefaultFormatBundleArti', 'CreatePoseGT', 'DefaultPoseFormatBundle', 'LoadPoseData',
-    'PoseImgPreprocess', 'ObjectSample', 'RandomFlip3D', 'ObjectNoise', 'GlobalRotScaleTrans',
+    'DefaultFormatBundleArti',
+    'ObjectSample', 'RandomFlip3D', 'ObjectNoise', 'GlobalRotScaleTrans',
     'PointShuffle', 'ObjectRangeFilter', 'PointsRangeFilter', 'Collect3D',
     'Compose', 'LoadMultiViewImageFromFiles', 'LoadPointsFromFile',
     'DefaultFormatBundle', 'DefaultFormatBundle3D', 'DataBaseSampler',
@@ -74,5 +78,6 @@ __all__ = [
     'GetRootCenteredPose', 'NormalizeJointCoordinate', 'ImageCoordinateNormalization',
     'CollectCameraIntrinsics', 'CameraProjection', 'RelativeJointRandomFlip',
     'PoseSequenceToTensor', 'Generate3DHeatmapTarget', 'MultitaskGatherTarget',
-    'HandGenerateRelDepthTarget', 'HandRandomFlip'
+    'HandGenerateRelDepthTarget', 'HandRandomFlip',
+    'LoadPointsFromFilePointFormer'
 ]

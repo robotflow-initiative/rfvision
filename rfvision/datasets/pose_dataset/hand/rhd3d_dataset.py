@@ -46,6 +46,7 @@ class Rhd3DDataset(Rhd2DDataset):
                 # For test set, joints_z (root_relative, root_joint_id: 0) in range (-199.5999755859375, 189.99996948242188)
                 joints_xyz = np.array(obj['joint_cam'])
                 joints_xyz_rel = joints_xyz - joints_xyz[0]  # root relative, root_joint_id: 0
+
                 joints_3d = np.zeros((num_joints, 3), dtype=np.float32)
                 joints_3d_visible = np.zeros((num_joints, 3), dtype=np.float32)
                 keypoints = np.array(obj['keypoints']).reshape(-1, 3)
@@ -85,9 +86,9 @@ class Rhd3DDataset(Rhd2DDataset):
 
         return gt_db
 
-    def evaluate(self, outputs, res_folder='./', metric='MPJPE', **kwargs):
-        """Evaluate interhand2d keypoint results. The pose prediction results
-        will be saved in `${res_folder}/result_keypoints.json`.
+    def evaluate(self, outputs, res_folder='./', metric='PCK', **kwargs):
+        """Evaluate rhd keypoint results. The pose prediction results will be
+        saved in `${res_folder}/result_keypoints.json`.
 
         Note:
             batch_size: N
@@ -96,28 +97,24 @@ class Rhd3DDataset(Rhd2DDataset):
             heatmap width: W
 
         Args:
-            outputs (list(dict))
+            outputs (list(preds, boxes, image_path, output_heatmap))
                 :preds (np.ndarray[N,K,3]): The first two dimensions are
                     coordinates, score is the third dimension of the array.
-                :hand_type (np.ndarray[N, 4]): The first two dimensions are
-                    hand type, scores is the last two dimensions.
-                :rel_root_depth (np.ndarray[N]): The relative depth of left
-                    wrist and right wrist.
                 :boxes (np.ndarray[N,6]): [center[0], center[1], scale[0]
                     , scale[1],area, score]
-                :image_paths (list[str]): For example, ['Capture6/
-                    0012_aokay_upright/cam410061/image4996.jpg']
+                :image_paths (list[str]): For example
+                    , ['training/rgb/00031426.jpg']
                 :output_heatmap (np.ndarray[N, K, H, W]): model outpus.
 
             res_folder (str): Path of directory to save the results.
             metric (str | list[str]): Metric to be performed.
-                Options: 'MRRPE', 'MPJPE', 'Handedness_acc'.
+                Options: 'PCK', 'AUC', 'EPE'.
 
         Returns:
             dict: Evaluation results for evaluation metric.
         """
         metrics = metric if isinstance(metric, list) else [metric]
-        allowed_metrics = ['MRRPE', 'MPJPE', 'Handedness_acc']
+        allowed_metrics = ['PCK', 'AUC', 'EPE']
         for metric in metrics:
             if metric not in allowed_metrics:
                 raise KeyError(f'metric {metric} is not supported')
@@ -126,18 +123,7 @@ class Rhd3DDataset(Rhd2DDataset):
 
         kpts = []
         for output in outputs:
-            preds = output.get('preds')
-            if preds is None and 'MPJPE' in metrics:
-                raise KeyError('metric MPJPE is not supported')
-
-            hand_type = output.get('hand_type')
-            if hand_type is None and 'Handedness_acc' in metrics:
-                raise KeyError('metric Handedness_acc is not supported')
-
-            rel_root_depth = output.get('rel_root_depth')
-            if rel_root_depth is None and 'MRRPE' in metrics:
-                raise KeyError('metric MRRPE is not supported')
-
+            preds = output['preds']
             boxes = output['boxes']
             image_paths = output['image_paths']
             bbox_ids = output['bbox_ids']
@@ -146,28 +132,18 @@ class Rhd3DDataset(Rhd2DDataset):
             for i in range(batch_size):
                 image_id = self.name2id[image_paths[i][len(self.img_prefix):]]
 
-                kpt = {
+                kpts.append({
+                    'keypoints': preds[i][:, :3].tolist(),
                     'center': boxes[i][0:2].tolist(),
                     'scale': boxes[i][2:4].tolist(),
                     'area': float(boxes[i][4]),
                     'score': float(boxes[i][5]),
                     'image_id': image_id,
                     'bbox_id': bbox_ids[i]
-                }
-
-                if preds is not None:
-                    kpt['keypoints'] = preds[i, :, :3].tolist()
-                if hand_type is not None:
-                    kpt['hand_type'] = hand_type[i][0:2].tolist()
-                    kpt['hand_type_score'] = hand_type[i][2:4].tolist()
-                if rel_root_depth is not None:
-                    kpt['rel_root_depth'] = float(rel_root_depth[i])
-
-                kpts.append(kpt)
+                })
         kpts = self._sort_and_unique_bboxes(kpts)
 
         self._write_keypoint_results(kpts, res_file)
-        print(f'Keypoints has saved to {os.path.abspath(res_file)}')
         info_str = self._report_metric(res_file, metrics)
         name_value = OrderedDict(info_str)
 

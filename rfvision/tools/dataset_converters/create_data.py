@@ -1,5 +1,5 @@
 import argparse
-from . import indoor_converter as indoor
+from rfvision.tools.dataset_converters import indoor_converter as indoor
 
 
 def scannet_data_prep(root_path, info_prefix, out_dir, workers):
@@ -27,7 +27,17 @@ def sunrgbd_data_prep(root_path, info_prefix, out_dir, workers):
     indoor.create_indoor_info_file(
         root_path, info_prefix, out_dir, workers=workers)
 
+def alfred_data_prep(root_path, info_prefix, out_dir, workers):
+    """Prepare the info file for alfred dataset.
 
+    Args:
+        root_path (str): Path of dataset root.
+        info_prefix (str): The prefix of info filenames.
+        out_dir (str): Output directory of the generated info file.
+        workers (int): Number of threads to be used.
+    """
+    indoor.create_indoor_info_file(
+        root_path, info_prefix, out_dir, workers=workers)
 
 
 parser = argparse.ArgumentParser(description='Data converter arg parser')
@@ -69,6 +79,12 @@ if __name__ == '__main__':
             workers=args.workers)
     elif args.dataset == 'sunrgbd':
         sunrgbd_data_prep(
+            root_path=args.root_path,
+            info_prefix=args.extra_tag,
+            out_dir=args.out_dir,
+            workers=args.workers)
+    elif args.dataset == 'alfred':
+        alfred_data_prep(
             root_path=args.root_path,
             info_prefix=args.extra_tag,
             out_dir=args.out_dir,

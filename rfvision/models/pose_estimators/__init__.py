@@ -1,8 +1,4 @@
-from .densefusion import DenseFusion
-from .densefusion_estimator import DenseFusionEstimator
-from .densefusion_refiner import DenseFusionRefiner
-from .ancsh import ANCSH
+from .articulation import ArticulationEstimator, ArticulationDataset
 __all__ = [
-    'DenseFusion', 'DenseFusionEstimator', 'DenseFusionRefiner', 
-    'ANCSH',
+    'ArticulationDataset', 'ArticulationEstimator'
 ]

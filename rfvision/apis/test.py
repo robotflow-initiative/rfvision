@@ -33,14 +33,13 @@ def single_gpu_test(model,
             with torch.no_grad():
                 result = model(return_loss=False, **data)
             results.append(result)
-
             # use the first key as main key to calculate the batch size
             batch_size = len(next(iter(data.values())))
             for _ in range(batch_size):
                 prog_bar.update()
         return results
     ################ For 3D ####################
-    if isinstance(model.module, models_3d):
+    elif isinstance(model.module, models_3d):
         for i, data in enumerate(data_loader):
             with torch.no_grad():
                 result = model(return_loss=False, rescale=True, **data)
@@ -139,14 +138,12 @@ def multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False):
         for data in data_loader:
             with torch.no_grad():
                 result = model(return_loss=False, **data)
-            results.append(result)
-
+            results.extend(result)
             if rank == 0:
                 # use the first key as main key to calculate the batch size
                 batch_size = len(result)
                 for _ in range(batch_size * world_size):
                     prog_bar.update()
-
     ################## For 2D #################
     else:
         for i, data in enumerate(data_loader):

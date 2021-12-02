@@ -1,4 +1,4 @@
-_base_ = ['../_base_/datasets/interhand3d.py']
+_base_ = ['../../_base_/datasets/interhand3d.py']
 log_level = 'INFO'
 load_from = None
 resume_from = None
@@ -136,7 +136,7 @@ test_pipeline = val_pipeline
 data_root = '/hdd0/data/interhand2.6m/InterHand2.6M_5fps_batch1'
 data = dict(
     samples_per_gpu=16,
-    workers_per_gpu=1,
+    workers_per_gpu=2,
     train=dict(
         type='InterHand3DDataset',
         ann_file=f'{data_root}/annotations/all/'
@@ -153,11 +153,11 @@ data = dict(
         dataset_info={{_base_.dataset_info}}),
     val=dict(
         type='InterHand3DDataset',
-        ann_file=f'{data_root}/annotations/machine_annot/'
+        ann_file=f'{data_root}/annotations/all/'
         'InterHand2.6M_val_data.json',
-        camera_file=f'{data_root}/annotations/machine_annot/'
+        camera_file=f'{data_root}/annotations/all/'
         'InterHand2.6M_val_camera.json',
-        joint_file=f'{data_root}/annotations/machine_annot/'
+        joint_file=f'{data_root}/annotations/all/'
         'InterHand2.6M_val_joint_3d.json',
         img_prefix=f'{data_root}/images/val/',
         data_cfg=data_cfg,

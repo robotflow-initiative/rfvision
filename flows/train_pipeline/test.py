@@ -1,3 +1,4 @@
+# Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 import os
 import os.path as osp
@@ -9,18 +10,20 @@ import torch
 from rflib import Config, DictAction
 from rflib.cnn import fuse_conv_bn
 from rflib.parallel import RFDataParallel, RFDistributedDataParallel
-from rflib.runner import get_dist_info, init_dist, load_checkpoint, wrap_fp16_model
+from rflib.runner import (get_dist_info, init_dist, load_checkpoint,
+                         wrap_fp16_model)
 
 from rfvision.apis import multi_gpu_test, single_gpu_test
-from rfvision.datasets import build_dataloader, build_dataset, replace_ImageToTensor
+from rfvision.datasets import (build_dataloader, build_dataset,
+                            replace_ImageToTensor)
 from rfvision.models import build_detector
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='RFVision test (and eval) a model')
+        description='rfvision test (and eval) a model')
     parser.add_argument('config', help='test config file path')
-    parser.add_argument('checkpoint', help='checkpoint file', default='none')
+    parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument(
         '--work-dir',
         help='the directory to save the file containing evaluation metrics')
@@ -86,14 +89,6 @@ def parse_args():
         choices=['none', 'pytorch', 'slurm', 'mpi'],
         default='none',
         help='job launcher')
-
-    # parser.add_argument('--gpu-ids',
-    #                     help='ids of gpus to use',
-    #                     type=int,
-    #                     nargs='+',
-    #                     default=[0]
-    #                     )
-
     parser.add_argument('--local_rank', type=int, default=0)
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
@@ -127,24 +122,20 @@ def main():
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
-    # import modules from string list.
-    if cfg.get('custom_imports', None):
-        from rflib.utils import import_modules_from_strings
-        import_modules_from_strings(**cfg['custom_imports'])
     # set cudnn_benchmark
     if cfg.get('cudnn_benchmark', False):
         torch.backends.cudnn.benchmark = True
 
-    cfg.model.init_cfg = None
+    # cfg.model.pretrained = None
     if cfg.model.get('neck'):
         if isinstance(cfg.model.neck, list):
             for neck_cfg in cfg.model.neck:
                 if neck_cfg.get('rfp_backbone'):
-                    if neck_cfg.rfp_backbone.get('init_cfg'):
-                        neck_cfg.rfp_backbone.init_cfg = None
+                    if neck_cfg.rfp_backbone.get('pretrained'):
+                        neck_cfg.rfp_backbone.pretrained = None
         elif cfg.model.neck.get('rfp_backbone'):
-            if cfg.model.neck.rfp_backbone.get('init_cfg'):
-                cfg.model.neck.rfp_backbone.init_cfg = None
+            if cfg.model.neck.rfp_backbone.get('pretrained'):
+                cfg.model.neck.rfp_backbone.pretrained = None
 
     # in case the test dataset is concatenated
     samples_per_gpu = 1
@@ -195,7 +186,7 @@ def main():
         wrap_fp16_model(model)
 
     # tycoer
-    if args.checkpoint != 'none' and args.checkpoint != 'None' and args.checkpoint != None:
+    if args.checkpoint != 'none' and args.checkpoint != 'None':
         checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
     else:
         checkpoint = {'state_dict': model.state_dict()}
@@ -207,8 +198,7 @@ def main():
     if 'CLASSES' in checkpoint.get('meta', {}):
         model.CLASSES = checkpoint['meta']['CLASSES']
     else:
-        if hasattr(model, 'CLASSES'):
-            model.CLASSES = dataset.CLASSES
+        model.CLASSES = dataset.CLASSES
 
     if not distributed:
         model = RFDataParallel(model, device_ids=[0])
@@ -235,7 +225,7 @@ def main():
             # hard-code way to remove EvalHook args
             for key in [
                     'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
-                    'rule'
+                    'rule', 'dynamic_intervals'
             ]:
                 eval_kwargs.pop(key, None)
             eval_kwargs.update(dict(metric=args.eval, **kwargs))

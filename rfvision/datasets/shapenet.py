@@ -2,7 +2,7 @@ import torch
 import os
 import numpy as np
 from rfvision.datasets import CustomDataset, DATASETS
-
+import trimesh
 
 class ShapeNetDataset(CustomDataset):
     CLASSES = ['02954340', '03001627', '02958343', '04099429', '04090263', '04460130',
@@ -32,6 +32,52 @@ class ShapeNetDataset(CustomDataset):
         pass
 
 
+def generate_target(pc, pc_normal, up_sym=False, right_sym=False, z_right=False, subsample=200000):
+    if subsample is None:
+        xv, yv = np.meshgrid(np.arange(pc.shape[1]), np.arange(pc.shape[1]))
+        point_idxs = np.stack([yv, xv], -1).reshape(-1, 2)
+    else:
+        point_idxs = np.random.randint(0, pc.shape[0], size=[subsample, 2])
+
+    a = pc[point_idxs[:, 0]]
+    b = pc[point_idxs[:, 1]]
+    pdist = a - b
+    pdist_unit = pdist / (np.linalg.norm(pdist, axis=-1, keepdims=True) + 1e-7)
+    proj_len = np.sum(a * pdist_unit, -1)
+    oc = a - proj_len[..., None] * pdist_unit
+    dist2o = np.linalg.norm(oc, axis=-1)
+    # print(proj_len.shape, dist2o.shape)
+    # print(proj_len.min(), proj_len.max())
+    target_tr = np.stack([proj_len, dist2o], -1)
+
+    up = np.array([0, 1, 0])
+    down = np.array([0, -1, 0])
+    if z_right:
+        right = np.array([0, 0, 1])
+        left = np.array([0, 0, -1])
+    else:
+        right = np.array([1, 0, 0])
+        left = np.array([-1, 0, 0])
+    up_cos = np.arccos(np.sum(pdist_unit * up, -1))
+    if up_sym:
+        up_cos = np.minimum(up_cos, np.arccos(np.sum(pdist_unit * down, -1)))
+    right_cos = np.arccos(np.sum(pdist_unit * right, -1))
+    if right_sym:
+        right_cos = np.minimum(right_cos, np.arccos(np.sum(pdist_unit * left, -1)))
+    target_rot = np.stack([up_cos, right_cos], -1)
+
+    pairwise_normals = pc_normal[point_idxs[:, 0]]
+    pairwise_normals[np.sum(pairwise_normals * pdist_unit, -1) < 0] *= -1
+    target_rot_aux = np.stack([
+        np.sum(pairwise_normals * up, -1) > 0,
+        np.sum(pairwise_normals * right, -1) > 0
+    ], -1).astype(np.float32)
+
+    return target_tr.astype(np.float32).reshape(-1, 2), \
+           target_rot.astype(np.float32).reshape(-1,2), \
+           target_rot_aux.reshape(-1, 2), \
+           point_idxs.astype(np.int64)
+
 
 class ShapeNetDataset(torch.utils.data.Dataset):
     def __init__(self, cfg, model_names):
@@ -55,11 +101,7 @@ class ShapeNetDataset(torch.utils.data.Dataset):
         import OpenGL
         OpenGL.FULL_LOGGING = False
         OpenGL.ERROR_LOGGING = False
-        from pyrender import PerspectiveCamera, \
-            DirectionalLight, SpotLight, PointLight, \
-            MetallicRoughnessMaterial, \
-            Primitive, Mesh, Node, Scene, \
-            OffscreenRenderer, PinholeCamera, RenderFlags
+        from pyrender import DirectionalLight, SpotLight,Primitive, Mesh, Node, Scene,OffscreenRenderer, PinholeCamera, RenderFlags
         r = OffscreenRenderer(viewport_width=640, viewport_height=480)
         shapenet_cls, mesh_name = model_name.split('/')
         path = f'/home/neil/disk/ShapeNetCore.v2/{shapenet_cls}/{mesh_name}/models/model_normalized.obj'

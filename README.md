@@ -30,7 +30,10 @@ This project is released under the [Apache 2.0 license](./LICENSE).
    + [x] SkeletonMerger
    + [x] ArticualtedPoseEstimation
    + [ ] OMAD
-4. Hand-Object Manipulation
+4. Human Analyzers
+   + [x] HMR
+   + [x] SimpleBaseline3D
+   + [x] InterNet
    + [x] HandTailor
    + [x] CPF (inference only, for training material, you may contact to get rfvision_restricted project)
    + [ ] Artiboost (rfvision_restricted project)

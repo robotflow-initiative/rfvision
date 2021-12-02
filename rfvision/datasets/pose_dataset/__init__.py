@@ -1,10 +1,11 @@
-from .hand import FreiHandDataset, InterHand3DDataset, Rhd2DDataset, Rhd3DDataset
+from .hand import InterHand3DDataset, Rhd2DDataset, Rhd3DDataset
 from .base import Kpt2dSviewRgbImgTopDownDataset, Kpt3dSviewRgbImgTopDownDataset
 from .dataset_info import DatasetInfo
 from .mesh import (MeshAdversarialDataset, MeshH36MDataset, MeshMixDataset,
                    MoshDataset)
-__all__ = ['InterHand3DDataset', 'FreiHandDataset', 'Kpt2dSviewRgbImgTopDownDataset',
+from .body import Body3DH36MDataset
+__all__ = ['InterHand3DDataset', 'Kpt2dSviewRgbImgTopDownDataset',
            'Kpt3dSviewRgbImgTopDownDataset', 'DatasetInfo', 'Rhd2DDataset', 'Rhd3DDataset',
            'MeshH36MDataset', 'MoshDataset', 'MeshMixDataset',
-           'MeshAdversarialDataset'
+           'MeshAdversarialDataset', 'Body3DH36MDataset'
            ]
