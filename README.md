@@ -7,9 +7,6 @@ The project takes a lot of design ideas from the great project [mmcv](https://gi
 
 But for robot vision where real-time visual servo, multi-modal perception are of more interest, RFVision is the project for you.
 
-## TODO
-1. [ ] VisionFlow: make the builder hierarchical, so that we can chain the models through robotflow.
-
 ## License
 This project is released under the [Apache 2.0 license](./LICENSE).
 
@@ -19,7 +16,7 @@ This project is released under the [Apache 2.0 license](./LICENSE).
    + [x] Mask RCNN
    + [x] PANet
    + [x] HTC
-   + [ ] DCT-Mask
+   + [x] DCT-Mask
    + [x] FCOS
    + [ ] SOLOv2
    + [x] YOLOv3/3-tiny/4/4-tiny/4-large
@@ -30,16 +27,18 @@ This project is released under the [Apache 2.0 license](./LICENSE).
    + [x] ImVoteNet
 3. Object Pose Estimation
    + [x] DenseFusion
+   + [x] SkeletonMerger
+   + [x] ArticualtedPoseEstimation
    + [ ] OMAD
 4. Human Analyzers
    + [x] HMR
    + [x] SimpleBaseline3D
    + [x] InterNet
    + [x] HandTailor
-   + [ ] CPF
-   + [ ] Artiboost
-   
+   + [x] CPF (inference only, for training material, you may contact to get rfvision_restricted project)
+   + [ ] Artiboost (rfvision_restricted project)
 5. Multi-modality
+   + [ ] 3D vision and touch for shape reconstruction
 
 ## Installation
 Please refer to [get_started.md](docs/get_started.md) for installation
@@ -59,15 +58,17 @@ If you use this toolbox or benchmark in your research, please cite this project.
 
 ## Projects in RobotFlow
 ### Software
-+ [RFLib](https://github.com/WenqiangX/rflib): RobotFlow foundational library for Robot Vision, Planning and Control.
-+ [RFVision](https://github.com/WenqiangX/rfvision): RobotFlow vision-related toolbox and benchmark.
-+ [RFMove](https://github.com/WenqiangX/rfmove): RobotFlow planning toolbox.
-+ [ReinForce](https://github.com/WenqiangX/ReinForce): RobotFlow reinforcement learning toolbox.
-+ [RFController](https://github.com/WenqiangX/rfcontroller): RobotFlow controller toolbox.
-+ [rFUniverse](https://github.com/WenqiangX/rfuniverse): A Unity-based Multi-purpose Simulation Environment.
-+ [RFBulletT](https://github.com/WenqiangX/rfbullett): A Pybullet-based Multi-purpose Simulation Environment.
-+ [RF_ROS](https://github.com/WenqiangX/rf_ros): ROS integration. Both ROS1 and ROS2 are supported.
-+ [RobotFlow](https://github.com/WenqiangX/robotflow): The barebone of the whole system. It organizes all the functionalities.
++ [RFLib](https://github.com/mvig-robotflow/rflib): RobotFlow foundational library for Robot Vision, Planning and Control.
++ [RFVision](https://github.com/mvig-robotflow/rfvision): RobotFlow vision-related toolbox and benchmark.
++ [RFMove](https://github.com/mvig-robotflow/rfmove): RobotFlow planning toolbox.
++ [ReinForce](https://github.com/mvig-robotflow/ReinForce): RobotFlow reinforcement learning toolbox.
++ [RFController](https://github.com/mvig-robotflow/rfcontroller): RobotFlow controller toolbox.
++ [rFUniverse](https://github.com/mvig-robotflow/rfuniverse): A Unity-based Multi-purpose Simulation Environment.
++ [RFBulletT](https://github.com/mvig-robotflow/rfbullett): A Pybullet-based Multi-purpose Simulation Environment.
++ [RF_ROS](https://github.com/mvig-robotflow/rf_ros): ROS integration. Both ROS1 and ROS2 are supported.
++ [RobotFlow](https://github.com/mvig-robotflow/robotflow): The barebone of the whole system. It organizes all the functionalities.
 ### Hardware
-+ [RFDigit](https://github.com/WenqiangX/rfdigit): A Customized Digit Tactile Sensor.
-+ [RFNail](#): in progress.
++ [RFDigit](https://github.com/mvig-robotflow/rfdigit): A Customized Digit Tactile Sensor.
+### Open Ecosystem
++ [N-D Pose Annotator](https://github.com/liuliu66/6DPoseAnnotator): support both rigid and articulated object pose annotation.
++ [model format converter](https://github.com/mvig-robotflow/model_format_converter): URDF and related model format converter.
