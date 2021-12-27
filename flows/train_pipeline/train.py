@@ -89,7 +89,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
@@ -190,7 +189,7 @@ def main():
         cfg.data.samples_per_gpu = 1
         cfg.data.workers_per_gpu = 0
         cfg.shuffle = False
-        init_constant_for_all(model, 0.001)
+        init_constant_for_all(model, 0.01)
 
     train_detector(
         model,

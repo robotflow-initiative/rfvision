@@ -1,10 +1,9 @@
 from .fpn import FPN
 from .pafpn import PAFPN
-from .yolo_neck import YOLOV3Neck, YOLOV4Neck
-from .yolov4_large_neck import YOLOV4LargeNeck
+from .yolo_neck import YOLOV3Neck
 from .gap_neck import GlobalAveragePooling
+from .yolox_pafpn import YOLOXPAFPN
 __all__ = [
-    'FPN', 'PAFPN', 'YOLOV3Neck', 'YOLOV4Neck', 
-    'YOLOV4LargeNeck',
+    'FPN', 'PAFPN', 'YOLOV3Neck',
     'GlobalAveragePooling'
 ]

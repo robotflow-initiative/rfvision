@@ -17,7 +17,6 @@ pddlstream/
 FastDownward/
 checkpoint/
 tmp/
-debug/debug.py
 temp/
 *.stl
 *.dae
