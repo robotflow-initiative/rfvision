@@ -1,7 +1,3 @@
-# Copyright (c) 2019 Western Digital Corporation or its affiliates.
-
-import warnings
-
 import torch.nn as nn
 from rflib.cnn import ConvModule
 from rflib.runner import BaseModule

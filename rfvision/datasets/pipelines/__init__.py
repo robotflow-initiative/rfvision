@@ -11,14 +11,11 @@ from .test_time_aug import MultiScaleFlipAug
 from .transforms import (Albu, CutOut, Expand, MinIoURandomCrop, Normalize,
                          Pad, PhotoMetricDistortion, RandomCenterCropPad,
                          RandomCrop, RandomFlip, RandomShift, Resize,
-                         SegRescale, GenerateCoef, LetterResize)
-from .arti_pipeline import (CreatePointData, LoadArtiPointData, DownSamplePointData,
-                            LoadArtiNOCSData, LoadArtiJointData, CreateArtiJointGT,
-                            CreatePartRelationGT, CreatePartMask, DownSampleArti,
-                            DefaultFormatBundleArti)
+                         SegRescale, LetterResize, Mosaic, RandomAffine,
+                         MixUp)
 
 from .dbsampler import DataBaseSampler
-from .formating3d import Collect3D, DefaultFormatBundle, DefaultFormatBundle3D
+from .formating3d import Collect3D, DefaultFormatBundle3D
 from .loading3d import (LoadAnnotations3D, LoadMultiViewImageFromFiles,
                         LoadPointsFromFile, LoadPointsFromMultiSweeps,
                         NormalizePointsColor, PointSegClassMapping, LoadImageFromFileMono3D,
@@ -58,10 +55,7 @@ __all__ = [
     'MinIoURandomCrop', 'Expand', 'PhotoMetricDistortion', 'Albu',
     'RandomCenterCropPad', 'AutoAugment', 'CutOut', 'Shear',
     'Rotate', 'ColorTransform', 'EqualizeTransform', 'BrightnessTransform',
-    'ContrastTransform', 'Translate', 'RandomShift', 'GenerateCoef', 'CreatePointData',
-    'LoadArtiPointData', 'DownSamplePointData', 'LoadArtiNOCSData', 'LoadArtiJointData',
-    'CreateArtiJointGT', 'CreatePartRelationGT', 'CreatePartMask', 'DownSampleArti',
-    'DefaultFormatBundleArti',
+    'ContrastTransform', 'Translate', 'RandomShift',
     'ObjectSample', 'RandomFlip3D', 'ObjectNoise', 'GlobalRotScaleTrans',
     'PointShuffle', 'ObjectRangeFilter', 'PointsRangeFilter', 'Collect3D',
     'Compose', 'LoadMultiViewImageFromFiles', 'LoadPointsFromFile',
@@ -74,7 +68,7 @@ __all__ = [
     'TopDownRandomFlip', 'TopDownHalfBodyTransform', 'TopDownGetRandomScaleRotation',
     'TopDownAffine', 'TopDownGenerateTarget',
     'ToTensorPose', 'NormalizeTensor', 'LoadImageFromFileSimple',
-
+    'Mosaic', 'RandomAffine','MixUp',
     'GetRootCenteredPose', 'NormalizeJointCoordinate', 'ImageCoordinateNormalization',
     'CollectCameraIntrinsics', 'CameraProjection', 'RelativeJointRandomFlip',
     'PoseSequenceToTensor', 'Generate3DHeatmapTarget', 'MultitaskGatherTarget',

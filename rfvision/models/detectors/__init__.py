@@ -8,8 +8,10 @@ from .two_stage import TwoStageDetector
 from .yolo import YOLOV3
 from .solo import SOLO
 from .solov2 import SOLOv2
+from .yolox import YOLOX
+
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 
     'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade', 'FCOS',
-    'YOLOV3', 'SOLO', 'SOLOv2'
+    'YOLOV3', 'SOLO', 'SOLOv2', 'YOLOX'
 ]

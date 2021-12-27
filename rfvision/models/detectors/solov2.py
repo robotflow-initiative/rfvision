@@ -38,9 +38,6 @@ class SOLOv2(SingleStageInstanceSegmentor):
             for gt_mask in gt_masks
         ]
 
-        ############## tycoer #############
-        gt_labels = [gt_label + 1 for gt_label in gt_labels]
-        ###################################
         x = self.extract_feat(img)
         outs = self.mask_head(x)
         # outs = self.bbox_head(x)
