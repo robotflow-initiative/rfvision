@@ -4,7 +4,7 @@ model = dict(
     type='USDSegYOLOV3',
     num_bases=32,
     method='cosine',
-    bases_path='./robotflow/perception/detector/new_32_1.npy',
+    bases_path='/home/hanyang/usd_seg/new_32_1.npy',
     backbone=dict(
         type='Darknet',
         depth=53,
@@ -35,17 +35,19 @@ model = dict(
         method='cosine',
         loss_mask=None,
         coef_weight=32
-    ))
-# training and testing settings
-train_cfg = dict(
-    one_hot_smoother=0., ignore_config=0.5, xy_use_logit=False, debug=False)
-test_cfg = dict(
-    nms_pre=1000,
-    min_bbox_size=0,
-    score_thr=0.05,
-    conf_thr=0.005,
-    nms=dict(type='nms', iou_thr=0.45),
-    max_per_img=100)
+    ),
+    # training and testing settings
+    train_cfg = dict(
+        one_hot_smoother=0., ignore_config=0.5, xy_use_logit=False, debug=False),
+    test_cfg = dict(
+        nms_pre=1000,
+        min_bbox_size=0,
+        score_thr=0.05,
+        conf_thr=0.005,
+        nms=dict(type='nms', iou_thr=0.45),
+        max_per_img=100)
+)
+
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -67,7 +69,7 @@ train_pipeline = [
     dict(type='RandomFlip', flip_ratio=0.5),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
-    dict(type='GenerateCoef', base_root='./robotflow/perception/detector/new_32_1.sklearnmodel',
+    dict(type='GenerateCoef', base_root='/home/hanyang/usd_seg/new_32_1.sklearnmodel',
          use_mask_bbox=False, scale=64, method='cosine', num_bases=32),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels', 'gt_coefs']),
@@ -120,7 +122,7 @@ lr_config = dict(
     step=[218, 246])
 # runtime settings
 total_epochs = 273
-work_dir = './work_dirs/usdseg_yolov3_273e_cosine_r_32x'
+work_dir = './work_dirs/usdseg_yolov3_273e_cosine_32x'
 find_unused_parameters = True
-evaluation = dict(interval=1, metric=['bbox', 'segm'])
+evaluation = dict(interval=10, metric=['bbox', 'segm'])
 load_from = None

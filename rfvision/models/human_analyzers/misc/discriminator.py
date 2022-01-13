@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 from rflib.cnn import normal_init, xavier_init
 
-from rfvision.models.utils.geometry import batch_rodrigues
+from ..utils.geometry import batch_rodrigues
 
 
 class BaseDiscriminator(nn.Module):

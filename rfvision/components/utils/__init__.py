@@ -2,7 +2,6 @@ from .builder import build_linear_layer
 from .normed_predictor import NormedConv2d, NormedLinear
 from .res_layer import ResLayer
 from .vote_module import VoteModule
-from .knn import knn_search
 from .mlp import MLP
 from .top_down_utils import (batch_argmax, batch_uv2xyz, heatmap_to_uv, generate_heatmap_2d,
                              get_K, xyz2uv, uv2xyz, affine_transform,

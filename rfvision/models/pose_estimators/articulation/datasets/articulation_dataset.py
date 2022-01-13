@@ -20,7 +20,11 @@ train_pipelines = [CreatePointDataTrain(),
                                     'joint_ins'])]
 
 test_keys = ['pts', 'pts_feature']
-test_pipelines = [CreatePointData(), DownSample(), ToTensor(keys=test_keys)]
+test_pipelines = [CreatePointData(), DownSample(), ToTensor(keys=test_keys),
+                  Collect(keys=test_keys,
+                          meta_keys=['sample_name', 'img_prefix',
+                                     'bbox', 'category_id', 'corner_pts',
+                                     'color_path', 'camera_intrinsic_path'])]
 
 
 
@@ -112,8 +116,11 @@ class ArticulationDataset(Dataset):
                             joint_ins=joint_ins,
                             norm_factors=norm_factors,
                             corner_pts=corner_pts,
-                            n_max_parts=self.n_max_parts))
-
+                            n_max_parts=self.n_max_parts,
+                            urdf_id=urdf_id,
+                            camera_intrinsic_path=self.camera_intrinsic_path
+                            ))
+        return results
     def prepare_train_sample(self, idx):
         sample_name = self.sample_list[idx]
         results = dict(sample_name=sample_name)

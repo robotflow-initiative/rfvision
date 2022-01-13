@@ -15,7 +15,7 @@ DETECTORS = MODELS
 FUSION_LAYERS = MODELS
 POSE_ESTIMATORS = MODELS
 HUMAN_ANALYZERS = MODELS
-
+MESH_MODELS = MODELS
 
 def build_backbone(cfg):
     """Build backbone."""
@@ -40,6 +40,10 @@ def build_shared_head(cfg):
 def build_head(cfg):
     """Build head."""
     return HEADS.build(cfg)
+
+def build_mesh_model(cfg):
+    """Build mesh model."""
+    return MESH_MODELS.build(cfg)
 
 
 def build_loss(cfg):

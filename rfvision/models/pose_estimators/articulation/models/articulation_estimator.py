@@ -1,11 +1,11 @@
 from .articulation_backbone import PointNet2ForArticulation
 from .estimation_head import EstimationHead
 from rfvision.models.builder import DETECTORS
-from rfvision.models.human_analyzers import BasePose
+from rfvision.models.detectors3d import Base3DDetector
 from .vis_pose import vis_pose
-
+from .optimizer import optimize_pose
 @DETECTORS.register_module()
-class ArticulationEstimator(BasePose):
+class ArticulationEstimator(Base3DDetector):
     '''
     This model refers to 'Category-Level Articulated Object Pose Estimation'
     http://cn.arxiv.org/abs/1912.11913
@@ -64,6 +64,12 @@ class ArticulationEstimator(BasePose):
     def with_nocs(self):
         return hasattr(self, 'nocs_head') and self.nocs_head is not None
 
+    def show_result(self):
+        pass
 
-    def show_result(self, refined_results, input_data, out_dir='./'):
-        vis_pose(refined_results, input_data, out_dir)
+    def extract_feat(self, imgs):
+        pass
+    def aug_test(self, imgs, img_metas, **kwargs):
+        pass
+    def simple_test(self, img, img_metas, **kwargs):
+        pass

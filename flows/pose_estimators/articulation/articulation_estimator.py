@@ -1,8 +1,8 @@
 model = dict(type='ArticulationEstimator')
 data_root = '/disk4/data/arti_data/real_data/box/'
 data = dict(
-    samples_per_gpu=1,
-    workers_per_gpu=1,
+    samples_per_gpu=32,
+    workers_per_gpu=2,
     train=dict(
         type='ArticulationDataset',
         ann_file=data_root + 'train_meta.txt',
@@ -17,7 +17,7 @@ data = dict(
         n_max_parts=13),
     test=dict(
         type='ArticulationDataset',
-        ann_file=data_root + 'test.txt',
+        ann_file=data_root + 'test_meta.txt',
         img_prefix=data_root,
         intrinsics_path=data_root + 'camera_intrinsic.json',
         n_max_parts=13),

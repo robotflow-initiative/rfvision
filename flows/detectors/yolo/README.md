@@ -33,4 +33,23 @@ We also train YOLOv3 with mixed precision training.
 
 ## Credit
 
-This implementation originates from the project of Haoyu Wu(@wuhy08) at Western Digital.
+This implementation originates from the project of Haoyu Wu(@wuhy08) at Western Digital.  
+
+# USD-Seg
+##Introduction
+```latex
+@article{USD-Seg,
+  title   = {Learning Universal Shape Dictionary for Realtime Instance Segmentation},
+  author  = {Tang, Tutian and Xu, Wenqiang and Ye, Ruolin and Yang, Lixin and Lu, Cewu},
+  journal= {arXiv preprint arXiv:2012.01050},
+  year={2020}
+}
+```
+Code: https://github.com/YoruCathy/USDSeg-FCOS  
+Paper: https://arxiv.org/abs/2012.01050
+
+##Results
+
+|    Backbone     |  Scale  | Batch Size | Mem (GB) | GPU Num | box AP | mask AP  |Config | Download  |
+| :-------------: | :-----: | :-----:    | :------: | :-----: | :----: | :------: | :--------: |:-----:|
+|   DarkNet-53    |   608   |   64       |   1.42   |      4  |  TODO  | TODO     |[cfg](flows/detectors/yolo/yolov3_usdseg_cosine_273e.py)|TODO|

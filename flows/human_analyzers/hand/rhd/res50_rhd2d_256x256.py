@@ -102,7 +102,7 @@ val_pipeline = [
 
 test_pipeline = val_pipeline
 
-data_root = '/hdd0/data/rhd'
+data_root = '/hdd0/data/rhd/RHD_published_v2'
 data = dict(
     samples_per_gpu=64,
     workers_per_gpu=2,

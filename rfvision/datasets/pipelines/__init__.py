@@ -44,7 +44,8 @@ from .hand_transform import HandGenerateRelDepthTarget, HandRandomFlip
 
 from .loading_custom import LoadPointsFromFilePointFormer
 
-
+from .pose import CollectPose
+from .transform_custom import GenerateCoef
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToDataContainer',
@@ -73,5 +74,5 @@ __all__ = [
     'CollectCameraIntrinsics', 'CameraProjection', 'RelativeJointRandomFlip',
     'PoseSequenceToTensor', 'Generate3DHeatmapTarget', 'MultitaskGatherTarget',
     'HandGenerateRelDepthTarget', 'HandRandomFlip',
-    'LoadPointsFromFilePointFormer'
+    'LoadPointsFromFilePointFormer', 'GenerateCoef'
 ]

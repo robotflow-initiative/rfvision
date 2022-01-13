@@ -32,9 +32,7 @@ def init_constant_for_all(model: torch.nn.Module, val=0.01):
 
 def debug_model(cfg_path, checkpoints_path=None):
     cfg = rflib.Config.fromfile(cfg_path)
-    model = build_detector(cfg.model,
-                           train_cfg=cfg.model.get('train_cfg', None),
-                           test_cfg=cfg.model.get('test_cfg', None))
+    model = build_detector(cfg.model)
     if checkpoints_path is not None:
         rflib.runner.load_checkpoint(model, checkpoints_path)
     else:
