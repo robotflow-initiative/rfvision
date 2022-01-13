@@ -1,19 +1,56 @@
 import os
+import numpy as np
 import cv2
 os.environ.update(PYOPENGL_PLATFORM='egl',)
 import trimesh
 import pyrender
+import open3d as o3d
 from tqdm import tqdm
 import pickle
+import torch
 from rfvision.datasets import DATASETS
 from rfvision.datasets.pipelines import Compose
-from rfvision.models.detectors3d.category_ppf.utils.utils import *
-category_dict = {1:'02876657',
-                 2:'02880940',
-                 3:'02942699',
-                 4:'02946921',
-                 5:'03642806',
-                 6:'03797390'}
+
+def pc_downsample(pc: np.ndarray, voxel_size=0.05):
+    pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pc))
+    return np.array(pcd.voxel_down_sample(voxel_size).points)
+
+def estimate_normals(pc, knn):
+    pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(pc))
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamKNN(knn=knn))
+    return np.array(pcd.normals)
+
+def backproject(depth, intrinsics, instance_mask):
+    intrinsics_inv = np.linalg.inv(intrinsics)
+    image_shape = depth.shape
+    width = image_shape[1]
+    height = image_shape[0]
+
+    x = np.arange(width)
+    y = np.arange(height)
+
+    # non_zero_mask = np.logical_and(depth > 0, depth < 5000)
+    non_zero_mask = (depth > 0)
+    final_instance_mask = np.logical_and(instance_mask, non_zero_mask)
+
+    idxs = np.where(final_instance_mask)
+    grid = np.array([idxs[1], idxs[0]])
+
+    length = grid.shape[1]
+    ones = np.ones([1, length])
+    uv_grid = np.concatenate((grid, ones), axis=0)  # [3, num_pixel]
+
+    xyz = intrinsics_inv @ uv_grid  # [3, num_pixel]
+    xyz = np.transpose(xyz)  # [num_pixel, 3]
+
+    z = depth[idxs[0], idxs[1]]
+
+    pts = xyz * z[:, np.newaxis] / xyz[:, -1:]
+    pts[:, 0] = -pts[:, 0]
+    pts[:, 1] = -pts[:, 1]
+    return pts, idxs
+
+
 @DATASETS.register_module()
 class ShapeNetDatasetForPPF(torch.utils.data.Dataset):
     def __init__(self,
@@ -22,20 +59,24 @@ class ShapeNetDatasetForPPF(torch.utils.data.Dataset):
                  category=2,
                  test_mode=False):
         super().__init__()
-        self.res = category_cfgs[category]['res']
-        self.tr_num_bins = category_cfgs[category]['tr_num_bins']
-        self.rot_num_bins = category_cfgs[category]['rot_num_bins']
-        self.cls_bins = category_cfgs[category]['cls_bins']
-        self.up_sym = category_cfgs[category]['up_sym']
-        self.right_sym = category_cfgs[category]['right_sym']
-        self.z_right = category_cfgs[category]['z_right']
-        self.npoint_max = category_cfgs[category]['npoint_max']
-        self.K = np.array(category_cfgs[category]['K'])
-        self.knn=category_cfgs[category]['knn']
 
+        self.res = 5e-3
+        self.tr_num_bins = 32
+        self.rot_num_bins = 36
+        self.cls_bins = True
+        self.up_sym = False
+        self.right_sym = False
+        self.z_right = False
+        self.npoint_max = 10000
+        self.K = np.float32([[591.0125, 0, 320],
+                             [0, 590.16775, 240],
+                             [0, 0, 1]])
+
+        self.knn=60
         self.category = category
 
         random_seed = 0
+
         if random_seed is not None:
             np.random.seed(random_seed)
 
@@ -44,10 +85,11 @@ class ShapeNetDatasetForPPF(torch.utils.data.Dataset):
         self.outputs = []
         self.mesh_path = []
         for line in lines:
-            if line.split(' ')[0] == str(self.category):
-                mesh_path = os.path.join(data_root, line[2:-1], 'models', 'model_normalized.obj')
-                self.mesh_path.append([mesh_path, line[2:10]])
-
+            line = line[2:-1]
+            category = line.split('/')[0]
+            if category == category_list[self.category-1]:
+                mesh_path = os.path.join(data_root, line, 'models', 'model_normalized.obj')
+                self.mesh_path.append([mesh_path, category])
 
         print('Processing...')
         self.outputs = tuple(self.get_pc_and_normals(i) for i in tqdm(range((len(self)))))
@@ -136,12 +178,8 @@ class ShapeNetDatasetForPPF(torch.utils.data.Dataset):
         targets_scale = np.log(((bounds[1] - bounds[0]) / 2).astype(np.float32) * scale) - np.log(
             np.array(scale_ranges[self.category]))
 
-        return {'pcs':pc.astype(np.float32),
-                'pc_normals':normals,
-                'targets_tr':targets_tr,
-                'targets_rot':targets_rot,
-                'targets_rot_aux': targets_rot_aux,
-                'targets_scale': targets_scale.astype(np.float32),
+        return {'pcs':pc.astype(np.float32), 'pc_normals':normals, 'targets_tr':targets_tr, 'targets_rot':targets_rot,
+                'targets_rot_aux': targets_rot_aux, 'targets_scale': targets_scale.astype(np.float32),
                 'point_idxs': point_idxs}
 
     def __getitem__(self, idx):
@@ -362,6 +400,43 @@ class NOCSForPPF(torch.utils.data.Dataset):
     def simple_test(self):
         pass
 
+# bottle
+# -0.25~0.25, 0~0.25, 0.05, 0.15, 0.05
+
+# bowl
+# -0.12~0.12, 0~0.12, 0.07, 0.03, 0.07
+
+# camera
+# -0.15~0.15, 0~0.15, 0.05, 0.05, 0.07
+
+# can
+# -0.1~0.1, 0~0.1, 0.037, 0.055, 0.037
+
+# laptop:
+# -0.3 ~ 0.3, 0~0.3, 0.13, 0.1, 0.15
+
+# mug
+# -0.12~0.12, 0~0.12, 0.06, 0.05, 0.045
+
+tr_ranges = {
+    1: [0.25, 0.25],
+    2: [0.12, 0.12],
+    3: [0.15, 0.15],
+    4: [0.1, 0.1],
+    5: [0.3, 0.3],
+    6: [0.12, 0.12]
+}
+
+scale_ranges = {
+    1: [0.05, 0.15, 0.05],
+    2: [0.07, 0.03, 0.07],
+    3: [0.05, 0.05, 0.07],
+    4: [0.037, 0.055, 0.037],
+    5: [0.13, 0.1, 0.15],
+    6: [0.06, 0.05, 0.045]
+}
+
+
 def real2prob(val, max_val, num_bins, circular=False):
     is_torch = isinstance(val, torch.Tensor)
     if is_torch:
@@ -470,7 +545,7 @@ shapenet_obj_scales = {
     '03797390': [0.1501, 0.1995]
 }
 
-
+category_list = [ '02876657', '02880940', '02942699','02946921','03642806', '03797390']
 
 if __name__ == '__main__':
     # dataset = ShapeNetDatasetForPPF(data_root='/hdd0/data/shapenet_v2/ShapeNetCore.v2',

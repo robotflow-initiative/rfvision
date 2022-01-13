@@ -9,9 +9,10 @@ from .yolo import YOLOV3
 from .solo import SOLO
 from .solov2 import SOLOv2
 from .yolox import YOLOX
+from .usd_seg import USDSegYOLOV3
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 
     'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade', 'FCOS',
-    'YOLOV3', 'SOLO', 'SOLOv2', 'YOLOX'
+    'YOLOV3', 'SOLO', 'SOLOv2', 'YOLOX', 'USDSegYOLOV3'
 ]

@@ -51,5 +51,3 @@ model = dict(
 
 # optimizer
 optimizer = dict(type='SGD', lr=0.01)
-
-data = dict(workers_per_gpu=2,)

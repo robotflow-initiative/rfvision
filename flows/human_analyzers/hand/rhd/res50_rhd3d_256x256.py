@@ -72,13 +72,13 @@ model = dict(
         loss_root_depth=dict(type='L1LossPose', use_target_weight=True),
         loss_hand_type=dict(type='BCELoss', use_target_weight=True)
         ),
-    train_cfg=dict(),
-    test_cfg=dict(
-        flip_test=False,
-        post_process='default',
-        shift_heatmap=True,
-        modulate_kernel=11))
-
+)
+train_cfg = dict()
+test_cfg = dict(
+    flip_test=False,
+    post_process='default',
+    shift_heatmap=True,
+    modulate_kernel=11)
 # In RHD:
 # For train set, joints_z in range (-52.540000915527344, 1182.0)
 # For test set, joints_z in range (-48.76000213623047, 994.0)
@@ -136,7 +136,6 @@ train_pipeline = [
 
 val_pipeline = [
     dict(type='LoadImageFromFileSimple'),
-    dict(type='TopDownAffine'),
     dict(type='ToTensorPose'),
     dict(
         type='NormalizeTensor',
@@ -152,7 +151,7 @@ val_pipeline = [
 
 test_pipeline = val_pipeline
 
-data_root = '/disk1/data/handdata/rhd/RHD_published_v2'
+data_root = '/hdd0/data/rhd/RHD_published_v2'
 data = dict(
     samples_per_gpu=32,
     workers_per_gpu=2,

@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 from rfvision.models.builder import DETECTORS
-from .yolo import YOLOV3
-from .fcos import FCOS
+from rfvision.models.detectors.yolo import YOLOV3
+from rfvision.models.detectors.fcos import FCOS
 from rfvision.core import bbox_mask2result
 
 

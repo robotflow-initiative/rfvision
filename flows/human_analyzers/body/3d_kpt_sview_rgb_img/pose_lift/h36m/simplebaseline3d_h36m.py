@@ -148,7 +148,7 @@ train_pipeline = [
         std=joint_2d_normalize_param['std']),
     dict(type='PoseSequenceToTensor', item='input_2d'),
     dict(
-        type='Collect',
+        type='CollectPose',
         keys=[('input_2d', 'input'), 'target'],
         meta_name='metas',
         meta_keys=[

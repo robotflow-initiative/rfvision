@@ -5,34 +5,38 @@ from rfvision.models.builder import DETECTORS
 from rfvision.models.human_analyzers import BasePose
 import numpy as np
 import cupy as cp
-from rfvision.models.detectors3d.category_ppf.utils.utils import fibonacci_sphere
-from rfvision.models.detectors3d.category_ppf.voting import backvote_kernel, rot_voting_kernel, ppf_kernel
+import visdom
+from .voting import backvote_kernel, rot_voting_kernel, ppf_kernel
+from .utils import fibonacci_sphere
 import cv2
-from rfvision.models.detectors3d.category_ppf.utils.utils import *
-
 
 @DETECTORS.register_module()
 class CategoryPPF(BasePose):
     def __init__(self,
+                 tr_ranges,
+                 scale_ranges,
                  category=2,
+                 knn=60,
+                 tr_num_bins=32,
+                 rot_num_bins=36,
+                 regress_right=True,
                  init_cfg=None,
                  train_cfg=None,
                  test_cfg=None):
         super().__init__(init_cfg=init_cfg)
 
         ############## para init ####################
-        self.knn = category_cfgs[category]['knn']
-        self.tr_num_bins = category_cfgs[category]['tr_num_bins']
-        self.rot_num_bins = category_cfgs[category]['rot_num_bins']
-        self.regress_right = category_cfgs[category]['regress_right']
-        self.num_rots = category_cfgs[category]['num_rots']
-        self.n_threads = category_cfgs[category]['n_threads']
-        self.res = category_cfgs[category]['res']
-        self.z_right = category_cfgs[category]['z_right']
-
-        self.category = category
+        self.knn = knn
+        self.tr_num_bins = tr_num_bins
+        self.rot_num_bins = rot_num_bins
+        self.regress_right = regress_right
         self.tr_ranges = tr_ranges
         self.scale_ranges = scale_ranges
+        self.num_rots = 72
+        self.n_threads = 512
+        self.res = 0.005
+        self.category = category
+        self.z_right = False
         ############### model init ###################
         self.point_encoder = PointEncoderRaw(k=self.knn, spfcs=[32, 64, 32, 32], num_layers=1, out_dim=32)
         self.ppf_encoder = PPFEncoder(ppffcs=[84, 32, 32, 16],
@@ -43,7 +47,7 @@ class CategoryPPF(BasePose):
         self.bcelogits = nn.BCEWithLogitsLoss()
         # self.loss_right_meter = AverageMeter()
         # self.loss_right_aux_meter = AverageMeter()
-        # self.vis = visdom.Visdom()
+        self.vis = visdom.Visdom()
 
     def forward_train(self,
                       pcs,
@@ -94,11 +98,11 @@ class CategoryPPF(BasePose):
     def forward_test(self,
                      pcs,
                      pc_normals,
-                     # img_metas
+                     img_metas
                      ):
         point_idxs = torch.randint(0, pcs.shape[1], (1000000, 2))
-        # RT = img_metas[0]['RT']
-        # gt_pc = img_metas[0]['gt_pc']
+        RT = img_metas[0]['RT']
+        gt_pc = img_metas[0]['gt_pc']
 
         with torch.no_grad():
             dist = torch.cdist(pcs, pcs)
@@ -117,9 +121,9 @@ class CategoryPPF(BasePose):
 
         corners = np.stack([np.min(pc, 0), np.max(pc, 0)])
         T_est = candidates[-1]
-        # T_gt = img_metas[0]['RT'][:3, -1]
-        # T_err_sp = np.linalg.norm(T_est - T_gt)
-        # print('pred translation error: ', T_err_sp)
+        T_gt = img_metas[0]['RT'][:3, -1]
+        T_err_sp = np.linalg.norm(T_est - T_gt)
+        print('pred translation error: ', T_err_sp)
 
         # back vote filtering
         block_size = (point_idxs.shape[0] + self.n_threads - 1) // self.n_threads
@@ -142,16 +146,12 @@ class CategoryPPF(BasePose):
         point_idxs = point_idxs[mask]
 
         # unsupervised segmentation
-        # pc_idxs = np.array(list(set(list(point_idxs.reshape(-1)))), np.int64)
-        # contrib_cnt = (point_idxs.reshape(-1, 1) == pc_idxs[None]).sum(0)
-        # import pdb; pdb.set_trace()
-        # pc_idxs = pc_idxs[contrib_cnt > 30]
-        pc_idxs2, counts2 = np.unique(point_idxs.reshape(-1), return_counts=True)
-        pc_idxs2 = pc_idxs2[counts2 > 30]
-        # print(set.symmetric_difference(set(pc_idxs), set(pc_idxs2)))
+        pc_idxs = np.array(list(set(list(point_idxs.reshape(-1)))), np.int64)
+        contrib_cnt = (point_idxs.reshape(-1, 1) == pc_idxs[None]).sum(0)
+        pc_idxs = pc_idxs[contrib_cnt > 175]
         mask = np.zeros((pc.shape[0],), bool)
-        mask[pc_idxs2] = True
-        # visualize(vis, pc[~mask], pc[mask], win=10, env='debug', opts=dict(markersize=3))
+        mask[pc_idxs] = True
+        # visualize(vis, pc[~mask], pc[mask], win=10, opts=dict(markersize=3))
 
         # # rotation vote
         angle_tol = 2
@@ -235,26 +235,19 @@ class CategoryPPF(BasePose):
             R_est = np.stack([np.cross(up, right), up, right], -1)
         else:
             R_est = np.stack([right, up, np.cross(right, up)], -1)
-        # if self.regress_right:
-        #     rot_err = np.arccos((np.trace(RT[:3, :3].T @ R_est) - 1.) / 2.) / np.pi * 180
-        #     print('pred up error: ', np.arccos(np.dot(up, RT[:3, 1])) / np.pi * 180)
-        # else:
-        #     rot_err = np.arccos(np.dot(up, RT[:3, 1])) / np.pi * 180
-        # print('pred rotation error: ', rot_err)
-        #
-        # retrieved_pc = gt_pc @ R_est.T + T_est
-        #
-        pred_scale = np.exp(preds_scale[0].mean(0).cpu().numpy()) * self.scale_ranges[self.category] * 2
-        scale = np.linalg.norm(pred_scale)
-        pred_scale = pred_scale / scale
-        # print('pred scale: ', np.exp(preds_scale[0].mean(0).cpu().numpy()) * self.scale_ranges[self.category])
-        # print('gt scale', gt_pc.max(0))
-        # return {'R_est': R_est, 'T_est':T_est, 'pc':pc, 'retrieved_pc': retrieved_pc}
+        if self.regress_right:
+            rot_err = np.arccos((np.trace(RT[:3, :3].T @ R_est) - 1.) / 2.) / np.pi * 180
+            print('pred up error: ', np.arccos(np.dot(up, RT[:3, 1])) / np.pi * 180)
+        else:
+            rot_err = np.arccos(np.dot(up, RT[:3, 1])) / np.pi * 180
+        print('pred rotation error: ', rot_err)
 
-        pred_RT = np.eye(4)
-        pred_RT[:3, :3], pred_RT[:3, 3] = R_est * scale, T_est
-        return {'pred_RT': pred_RT, 'pred_scale': pred_scale}
+        retrieved_pc = gt_pc @ R_est.T + T_est
+        #
 
+        print('pred scale: ', np.exp(preds_scale[0].mean(0).cpu().numpy()) * self.scale_ranges[self.category])
+        print('gt scale', gt_pc.max(0))
+        return {'R_est': R_est, 'T_est':T_est, 'pc':pc, 'retrieved_pc': retrieved_pc}
 
     def show_results(self,
                      pc,
